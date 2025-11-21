@@ -1,0 +1,15 @@
+# Editor files
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Lua Language Server
+.luarc.json
+
+# Testing
+.tests/
+
+# Optional: Uncomment to ignore compiled Lua files
+# Note: Many nfnl plugins commit compiled Lua so users don't need nfnl installed
+# lua/
