@@ -70,8 +70,8 @@
    :debug false
    :log_file nil})
 
-;; Current configuration state
-(var config {})
+;; Current configuration state (initialized with defaults so plugin works without setup())
+(var config (vim.deepcopy default-config))
 
 (fn read-token-file [path]
   "Read token from file, returns nil if file doesn't exist or is unreadable"

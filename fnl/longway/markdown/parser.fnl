@@ -73,7 +73,7 @@
         lines []
         header-line nil]
     (var found-header false)
-    (each [line (string.gmatch block "[^\n]*\n?")]
+    (each [line (string.gmatch (.. block "\n") "([^\n]*)\n")]
       (if (not found-header)
           (let [(author timestamp id) (string.match line header-pattern)]
             (when author
@@ -84,7 +84,7 @@
                                 :is_new (= id "new")})))
           ;; Collect body lines (skip empty lines at start)
           (when (or (> (length lines) 0) (not (string.match line "^%s*$")))
-            (table.insert lines (string.gsub line "\n$" "")))))
+            (table.insert lines line))))
     (when header-line
       (set header-line.text (table.concat lines "\n"))
       header-line)))

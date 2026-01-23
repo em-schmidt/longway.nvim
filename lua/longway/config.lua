@@ -82,8 +82,8 @@ local default_config = {
   log_file = nil,
 }
 
--- Current configuration state
-local config = {}
+-- Current configuration state (initialized with defaults so plugin works without setup())
+local config = vim.deepcopy(default_config)
 
 local function read_token_file(path)
   local expanded = vim.fn.expand(path)

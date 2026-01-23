@@ -91,7 +91,7 @@ local function parse_comment_block(block)
   local header_line = nil
   local found_header = false
 
-  for line in (block .. "\n"):gmatch("([^\n]*)\n?") do
+  for line in (block .. "\n"):gmatch("([^\n]*)\n") do
     if not found_header then
       local author, timestamp, id = line:match(header_pattern)
       if author then
@@ -106,7 +106,7 @@ local function parse_comment_block(block)
     else
       -- Collect body lines (skip empty lines at start)
       if #lines > 0 or not line:match("^%s*$") then
-        table.insert(lines, line:gsub("\n$", ""))
+        table.insert(lines, line)
       end
     end
   end
