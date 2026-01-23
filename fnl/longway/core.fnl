@@ -49,7 +49,7 @@
         url (. parsed.frontmatter :shortcut_url)]
     (if url
         (do
-          (vim.fn.system [(or vim.g.longway_browser "xdg-open") url])
+          (vim.ui.open url)
           (notify.info (string.format "Opening %s" url)))
         (notify.error "No shortcut_url found in frontmatter"))))
 

@@ -57,7 +57,7 @@ function M.open_in_browser()
   local url = parsed.frontmatter.shortcut_url
 
   if url then
-    vim.fn.system({ vim.g.longway_browser or "xdg-open", url })
+    vim.ui.open(url)
     notify.info(string.format("Opening %s", url))
   else
     notify.error("No shortcut_url found in frontmatter")
