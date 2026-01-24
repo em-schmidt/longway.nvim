@@ -2,21 +2,16 @@
 set -euo pipefail
 
 # Compile all Fennel files to Lua using nfnl
-# This script requires Neovim and nfnl to be available
+# Run this locally after modifying .fnl files, then commit the .lua output
 
 echo "Compiling Fennel files..."
+echo "This requires nfnl to be installed and will prompt to trust .nfnl.fnl"
+echo ""
 
-# Set up environment to use test dependencies
-export XDG_CONFIG_HOME="$(pwd)/.test"
-export XDG_DATA_HOME="$(pwd)/.test"
-export XDG_STATE_HOME="$(pwd)/.test"
-
-# Run nfnl compilation
 nvim --headless \
-    --noplugin \
-    -u .test/init.lua \
     -c "lua require('nfnl').setup()" \
-    -c "lua require('nfnl.api').compile_all_files()" \
-    -c "qa"
+    -c "lua require('nfnl.api')['compile-all-files']()" \
+    -c "qa!"
 
-echo "Compilation complete!"
+echo ""
+echo "Done! Remember to commit the compiled lua/ files."

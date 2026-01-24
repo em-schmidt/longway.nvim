@@ -16,14 +16,6 @@ else
     echo "plenary.nvim already installed"
 fi
 
-# Clone nfnl (required for Fennel compilation)
-if [[ ! -d "$PACK_DIR/nfnl" ]]; then
-    echo "Cloning nfnl..."
-    git clone --depth 1 https://github.com/Olical/nfnl "$PACK_DIR/nfnl"
-else
-    echo "nfnl already installed"
-fi
-
 # Symlink the plugin itself
 if [[ ! -L "$PACK_DIR/longway.nvim" ]]; then
     echo "Symlinking longway.nvim..."
