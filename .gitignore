@@ -7,8 +7,9 @@
 # Lua Language Server
 .luarc.json
 
-# Testing
-.tests/
+# Testing - ignore runtime artifacts but keep init
+.test/*
+!.test/init.lua
 
 # Optional: Uncomment to ignore compiled Lua files
 # Note: Many nfnl plugins commit compiled Lua so users don't need nfnl installed
