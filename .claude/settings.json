@@ -1,0 +1,24 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/setup-env.sh"
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "Bash(nvim --version)",
+      "Bash(nvim --headless:*)",
+      "Bash(luarocks:*)",
+      "Bash(fennel:*)",
+      "Bash(make:*)"
+    ]
+  }
+}
