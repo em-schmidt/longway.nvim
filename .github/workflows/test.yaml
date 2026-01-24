@@ -39,6 +39,7 @@ jobs:
           ./scripts/setup-test-deps
 
       - name: Run tests
+        timeout-minutes: 10
         run: |
           chmod +x scripts/test
           ./scripts/test
