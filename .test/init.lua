@@ -25,3 +25,10 @@ end
 
 -- Ensure nfnl plugin files are sourced (registers commands)
 vim.cmd("runtime! plugin/**/*.lua")
+
+-- Trust the .nfnl.fnl config file for CI (nfnl security feature)
+local nfnl_trust_ok, nfnl_trust = pcall(require, "nfnl.trust")
+if nfnl_trust_ok and nfnl_trust.trust then
+    local config_path = vim.fn.getcwd() .. "/.nfnl.fnl"
+    nfnl_trust.trust(config_path)
+end
