@@ -10,7 +10,6 @@
 # Testing - ignore runtime artifacts but keep test config files
 .test/*
 !.test/init.lua
-!.test/run_tests.lua
 
 # Optional: Uncomment to ignore compiled Lua files
 # Note: Many nfnl plugins commit compiled Lua so users don't need nfnl installed
