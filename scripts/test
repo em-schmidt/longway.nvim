@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Isolate test environment from user config
+export XDG_CONFIG_HOME="$(pwd)/.test"
+export XDG_DATA_HOME="$(pwd)/.test"
+export XDG_STATE_HOME="$(pwd)/.test"
+
+# Verify test files exist (should be pre-compiled and committed)
+if [ ! -d "lua/longway-spec" ]; then
+    echo "ERROR: lua/longway-spec/ directory missing."
+    echo "Test files should be compiled locally and committed to the repo."
+    exit 1
+fi
+
+echo "Running tests..."
+
+# Run tests using PlenaryBustedDirectory (same as Conjure)
+nvim --headless \
+    -u .test/init.lua \
+    -c "PlenaryBustedDirectory lua/longway-spec { minimal_init = '.test/init.lua', sequential = true }"

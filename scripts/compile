@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Compile all Fennel files to Lua using nfnl
+# Run this locally after modifying .fnl files, then commit the .lua output
+
+echo "Compiling Fennel files..."
+echo "This requires nfnl to be installed and will prompt to trust .nfnl.fnl"
+echo ""
+
+nvim --headless \
+    -c "lua require('nfnl').setup()" \
+    -c "lua require('nfnl.api')['compile-all-files']()" \
+    -c "qa!"
+
+echo ""
+echo "Done! Remember to commit the compiled lua/ files."

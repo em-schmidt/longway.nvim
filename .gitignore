@@ -4,11 +4,12 @@
 *~
 .DS_Store
 
-# Lua Language Server
-.luarc.json
+# Lua Language Server (user-specific settings)
+# Note: .luarc.json is tracked for consistent test development
 
-# Testing
-.tests/
+# Testing - ignore runtime artifacts but keep test config files
+.test/*
+!.test/init.lua
 
 # Optional: Uncomment to ignore compiled Lua files
 # Note: Many nfnl plugins commit compiled Lua so users don't need nfnl installed
