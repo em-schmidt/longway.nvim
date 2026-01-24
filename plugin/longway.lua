@@ -57,8 +57,74 @@ vim.api.nvim_create_user_command('LongwayInfo', function()
   print('  Configured: ' .. tostring(info.configured))
   print('  Workspace: ' .. info.workspace_dir)
   print('  Debug: ' .. tostring(info.debug))
+  local presets = info.presets or {}
+  local preset_count = 0
+  for _ in pairs(presets) do preset_count = preset_count + 1 end
+  print('  Presets: ' .. preset_count)
 end, {
   desc = 'Show longway.nvim plugin info',
+})
+
+-- Phase 2: Epic pull
+vim.api.nvim_create_user_command('LongwayPullEpic', function(opts)
+  local epic_id = opts.args
+  if epic_id == '' then
+    vim.notify('[longway] Usage: :LongwayPullEpic <epic_id>', vim.log.levels.ERROR)
+    return
+  end
+  require('longway').pull_epic(tonumber(epic_id) or epic_id)
+end, {
+  nargs = 1,
+  desc = 'Pull an epic from Shortcut by ID',
+})
+
+-- Phase 2: Sync command (query or preset)
+vim.api.nvim_create_user_command('LongwaySync', function(opts)
+  local arg = opts.args
+  if arg == '' then
+    require('longway').sync()
+  else
+    require('longway').sync(arg)
+  end
+end, {
+  nargs = '?',
+  desc = 'Sync stories by query (owner:me state:started) or preset name',
+})
+
+-- Phase 2: Sync all presets
+vim.api.nvim_create_user_command('LongwaySyncAll', function()
+  require('longway').sync_all()
+end, {
+  desc = 'Sync all configured presets',
+})
+
+-- Phase 2: Cache management
+vim.api.nvim_create_user_command('LongwayCacheRefresh', function(opts)
+  local cache_type = opts.args
+  if cache_type == '' then
+    require('longway').cache_refresh()
+  else
+    require('longway').cache_refresh(cache_type)
+  end
+end, {
+  nargs = '?',
+  complete = function()
+    return { 'members', 'workflows', 'iterations', 'teams' }
+  end,
+  desc = 'Refresh cache (members, workflows, iterations, teams, or all)',
+})
+
+vim.api.nvim_create_user_command('LongwayCacheStatus', function()
+  require('longway').cache_status()
+end, {
+  desc = 'Show status of all caches',
+})
+
+-- Phase 2: List presets
+vim.api.nvim_create_user_command('LongwayPresets', function()
+  require('longway').list_presets()
+end, {
+  desc = 'List configured presets',
 })
 
 -- Legacy hello command for testing

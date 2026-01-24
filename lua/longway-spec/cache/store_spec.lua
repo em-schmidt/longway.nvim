@@ -1,0 +1,86 @@
+-- Tests for longway.cache.store
+local t = require("longway-spec.init")
+local cache = require("longway.cache.store")
+
+local function _1_()
+  before_each(function() t.setup_test_config({}) end)
+
+  describe("get", function()
+    it("is a function", function()
+      assert.is_function(cache.get)
+    end)
+    it("returns expired for missing cache", function()
+      local result = cache.get("nonexistent")
+      assert.is_true(result.expired)
+    end)
+  end)
+
+  describe("set", function()
+    it("is a function", function()
+      assert.is_function(cache.set)
+    end)
+  end)
+
+  describe("invalidate", function()
+    it("is a function", function()
+      assert.is_function(cache.invalidate)
+    end)
+    it("returns ok for any cache type", function()
+      local result = cache.invalidate("members")
+      assert.is_true(result.ok)
+    end)
+  end)
+
+  describe("invalidate_all", function()
+    it("is a function", function()
+      assert.is_function(cache.invalidate_all)
+    end)
+    it("returns ok", function()
+      local result = cache.invalidate_all()
+      assert.is_true(result.ok)
+    end)
+  end)
+
+  describe("get_or_fetch", function()
+    it("is a function", function()
+      assert.is_function(cache.get_or_fetch)
+    end)
+    it("calls fetch function when cache is empty", function()
+      local fetch_called = false
+      local fetch_fn = function()
+        fetch_called = true
+        return { ok = true, data = { test = true } }
+      end
+      cache.get_or_fetch("test-cache", fetch_fn)
+      assert.is_true(fetch_called)
+    end)
+  end)
+
+  describe("get_age", function()
+    it("is a function", function()
+      assert.is_function(cache.get_age)
+    end)
+    it("returns nil for missing cache", function()
+      local age = cache.get_age("nonexistent")
+      assert.is_nil(age)
+    end)
+  end)
+
+  describe("get_status", function()
+    it("is a function", function()
+      assert.is_function(cache.get_status)
+    end)
+    it("returns a table", function()
+      local status = cache.get_status()
+      assert.is_table(status)
+    end)
+  end)
+
+  describe("refresh", function()
+    it("is a function", function()
+      assert.is_function(cache.refresh)
+    end)
+  end)
+end
+
+return describe("longway.cache.store", _1_)

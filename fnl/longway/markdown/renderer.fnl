@@ -4,8 +4,14 @@
 (local config (require :longway.config))
 (local frontmatter (require :longway.markdown.frontmatter))
 (local hash (require :longway.util.hash))
+(local slug (require :longway.util.slug))
 
 (local M {})
+
+(fn generate-story-filename [story]
+  "Generate the filename for a story markdown file"
+  (let [cfg (config.get)]
+    (.. (slug.generate story.name story.id cfg) ".md")))
 
 (fn build-story-frontmatter [story]
   "Build frontmatter data for a story"
@@ -162,10 +168,37 @@
    :local_updated_at (os.date "!%Y-%m-%dT%H:%M:%SZ")
    :stats (or epic.stats {})})
 
+(fn render-story-link [story]
+  "Render a link to a story's markdown file"
+  (let [filename (generate-story-filename story)]
+    (string.format "[%s](../stories/%s)" story.name filename)))
+
+(fn render-story-state-badge [story]
+  "Render a state indicator for a story"
+  (let [state (or story.workflow_state_name "Unknown")]
+    ;; Use emoji or text based on state type
+    (if (string.find (string.lower state) "done")
+        (.. "✓ " state)
+        (string.find (string.lower state) "progress")
+        (.. "→ " state)
+        state)))
+
+(fn render-epic-stats [epic]
+  "Render epic statistics summary"
+  (let [stats (or epic.stats {})]
+    (string.format "**Progress:** %d/%d stories done (%d%%)"
+                   (or stats.num_stories_done 0)
+                   (or stats.num_stories 0)
+                   (if (and stats.num_stories (> stats.num_stories 0))
+                       (math.floor (* (/ (or stats.num_stories_done 0) stats.num_stories) 100))
+                       0))))
+
 (fn M.render-epic [epic stories]
   "Render an epic to markdown, optionally with story list"
   (let [fm-data (build-epic-frontmatter epic)
         sections [(.. "# " epic.name)
+                  ""
+                  (render-epic-stats epic)
                   ""
                   "## Description"
                   ""
@@ -176,20 +209,29 @@
       (table.insert sections "")
       (table.insert sections "## Stories")
       (table.insert sections "")
-      (table.insert sections "| ID | Title | State | Owner | Points |")
-      (table.insert sections "|----|-------|-------|-------|--------|")
+      (table.insert sections "| Status | Title | State | Owner | Points |")
+      (table.insert sections "|:------:|-------|-------|-------|-------:|")
       (each [_ story (ipairs stories)]
         (let [owner-name (if (and story.owners (> (length story.owners) 0))
                              (. story.owners 1 :profile :name)
                              "-")
-              points (or story.estimate "-")]
+              points (or story.estimate "-")
+              status-icon (if story.completed "✓"
+                              story.started "→"
+                              "○")
+              story-link (render-story-link story)]
           (table.insert sections
                         (string.format "| %s | %s | %s | %s | %s |"
-                                       story.id
-                                       story.name
+                                       status-icon
+                                       story-link
                                        (or story.workflow_state_name "-")
                                        owner-name
                                        points)))))
+
+    ;; Milestones section (if epic has milestone)
+    (when epic.milestone_id
+      (table.insert sections "")
+      (table.insert sections (string.format "**Milestone:** %s" (or epic.milestone_id "-"))))
 
     ;; Local notes
     (table.insert sections "")

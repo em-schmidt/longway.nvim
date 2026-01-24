@@ -4,8 +4,14 @@
 local config = require("longway.config")
 local frontmatter = require("longway.markdown.frontmatter")
 local hash = require("longway.util.hash")
+local slug = require("longway.util.slug")
 
 local M = {}
+
+local function generate_story_filename(story)
+  local cfg = config.get()
+  return slug.generate(story.name, story.id, cfg) .. ".md"
+end
 
 local function build_story_frontmatter(story)
   local fm = {
@@ -192,11 +198,29 @@ local function build_epic_frontmatter(epic)
   }
 end
 
+local function render_story_link(story)
+  local filename = generate_story_filename(story)
+  return string.format("[%s](../stories/%s)", story.name, filename)
+end
+
+local function render_epic_stats(epic)
+  local stats = epic.stats or {}
+  local num_stories = stats.num_stories or 0
+  local num_done = stats.num_stories_done or 0
+  local progress = 0
+  if num_stories > 0 then
+    progress = math.floor((num_done / num_stories) * 100)
+  end
+  return string.format("**Progress:** %d/%d stories done (%d%%)", num_done, num_stories, progress)
+end
+
 function M.render_epic(epic, stories)
   local fm_data = build_epic_frontmatter(epic)
 
   local sections = {
     "# " .. epic.name,
+    "",
+    render_epic_stats(epic),
     "",
     "## Description",
     "",
@@ -208,8 +232,8 @@ function M.render_epic(epic, stories)
     table.insert(sections, "")
     table.insert(sections, "## Stories")
     table.insert(sections, "")
-    table.insert(sections, "| ID | Title | State | Owner | Points |")
-    table.insert(sections, "|----|-------|-------|-------|--------|")
+    table.insert(sections, "| Status | Title | State | Owner | Points |")
+    table.insert(sections, "|:------:|-------|-------|-------|-------:|")
 
     for _, story in ipairs(stories) do
       local owner_name = "-"
@@ -217,13 +241,26 @@ function M.render_epic(epic, stories)
         owner_name = story.owners[1].profile.name
       end
       local points = story.estimate or "-"
+      local status_icon = "○"
+      if story.completed then
+        status_icon = "✓"
+      elseif story.started then
+        status_icon = "→"
+      end
+      local story_link = render_story_link(story)
       table.insert(sections, string.format("| %s | %s | %s | %s | %s |",
-        story.id,
-        story.name,
+        status_icon,
+        story_link,
         story.workflow_state_name or "-",
         owner_name,
         points))
     end
+  end
+
+  -- Milestone section
+  if epic.milestone_id then
+    table.insert(sections, "")
+    table.insert(sections, string.format("**Milestone:** %s", epic.milestone_id or "-"))
   end
 
   -- Local notes

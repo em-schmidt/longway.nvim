@@ -21,7 +21,7 @@
     (print (string.format "  Workspace: %s" (config.get-workspace-dir)))
     (print (string.format "  Token configured: %s" (tostring (config.is-configured))))))
 
-;; Expose core functions
+;; Expose core functions (Phase 1)
 (set M.pull core.pull)
 (set M.push core.push)
 (set M.refresh core.refresh)
@@ -29,9 +29,26 @@
 (set M.status core.status)
 (set M.get-info core.get-info)
 
+;; Expose core functions (Phase 2)
+(set M.pull-epic core.pull-epic)
+(set M.sync core.sync)
+(set M.sync-all core.sync-all)
+(set M.cache-refresh core.cache-refresh)
+(set M.cache-status core.cache-status)
+(set M.list-presets core.list-presets)
+
+;; Lua-friendly aliases (underscores)
+(set M.pull_epic core.pull-epic)
+(set M.sync_all core.sync-all)
+(set M.cache_refresh core.cache-refresh)
+(set M.cache_status core.cache-status)
+(set M.list_presets core.list-presets)
+(set M.get_info core.get-info)
+
 ;; Expose config functions
 (set M.get-config config.get)
 (set M.is-configured config.is-configured)
+(set M.get-presets config.get-presets)
 
 ;; Legacy function for compatibility
 (set M.hello core.hello)

@@ -103,4 +103,63 @@ This is a test comment.
 <!-- This section is NOT synced to Shortcut -->
 ")
 
+;; Phase 2 test helpers
+
+(fn M.make-epic [overrides]
+  "Create a mock epic with optional overrides"
+  (vim.tbl_deep_extend :force
+                       {:id 99999
+                        :name "Test Epic"
+                        :description "This is the epic description."
+                        :state "in progress"
+                        :app_url "https://app.shortcut.com/test/epic/99999"
+                        :created_at "2026-01-01T00:00:00Z"
+                        :updated_at "2026-01-15T12:00:00Z"
+                        :planned_start_date "2026-01-01"
+                        :deadline "2026-03-01"
+                        :stats {:num_stories 10
+                                :num_stories_started 3
+                                :num_stories_done 5
+                                :num_stories_unstarted 2
+                                :num_points 20
+                                :num_points_done 10}}
+                       (or overrides {})))
+
+(fn M.make-member [overrides]
+  "Create a mock member with optional overrides"
+  (vim.tbl_deep_extend :force
+                       {:id "member-uuid-123"
+                        :profile {:name "Test User"
+                                  :mention_name "testuser"
+                                  :email_address "test@example.com"}}
+                       (or overrides {})))
+
+(fn M.make-workflow [overrides]
+  "Create a mock workflow with optional overrides"
+  (vim.tbl_deep_extend :force
+                       {:id 1
+                        :name "Default Workflow"
+                        :states [{:id 101 :name "To Do" :type "unstarted"}
+                                 {:id 102 :name "In Progress" :type "started"}
+                                 {:id 103 :name "Done" :type "done"}]}
+                       (or overrides {})))
+
+(fn M.make-iteration [overrides]
+  "Create a mock iteration with optional overrides"
+  (vim.tbl_deep_extend :force
+                       {:id 1001
+                        :name "Sprint 1"
+                        :status "started"
+                        :start_date "2026-01-01"
+                        :end_date "2026-01-14"}
+                       (or overrides {})))
+
+(fn M.make-team [overrides]
+  "Create a mock team/group with optional overrides"
+  (vim.tbl_deep_extend :force
+                       {:id "team-uuid-123"
+                        :name "Engineering"
+                        :member_ids ["member-1" "member-2" "member-3"]}
+                       (or overrides {})))
+
 M

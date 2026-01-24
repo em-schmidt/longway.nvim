@@ -4,6 +4,7 @@
 (local pull (require :longway.sync.pull))
 (local push (require :longway.sync.push))
 (local notify (require :longway.ui.notify))
+(local cache (require :longway.cache.store))
 
 (local M {})
 
@@ -15,10 +16,11 @@
   "Get plugin information"
   (let [cfg (config.get)]
     {:name "longway.nvim"
-     :version "0.1.0"
+     :version "0.2.0"
      :author "Eric Schmidt"
      :configured (config.is-configured)
      :workspace_dir (config.get-workspace-dir)
+     :presets (config.get-presets)
      :debug cfg.debug}))
 
 (fn M.pull [story-id]
@@ -76,5 +78,106 @@
                   (print (string.format "Last updated: %s" fm.updated_at)))
                 (when fm.local_updated_at
                   (print (string.format "Local updated: %s" fm.local_updated_at)))))))))
+
+;; Phase 2: Sync and filtering functions
+
+(fn M.pull-epic [epic-id]
+  "Pull an epic by ID and open in buffer"
+  (if (not (config.is-configured))
+      (notify.no-token)
+      (pull.pull-epic-to-buffer epic-id)))
+
+(fn M.sync [query-or-preset]
+  "Sync stories by query string or preset name
+   If query contains ':' it's treated as a query, otherwise as a preset name"
+  (if (not (config.is-configured))
+      (notify.no-token)
+      (if (not query-or-preset)
+          ;; No argument, use default preset if set
+          (let [default-preset (config.get-default-preset)]
+            (if default-preset
+                (pull.sync-preset default-preset)
+                (do
+                  (notify.error "No query or preset specified")
+                  {:ok false :error "No query or preset specified"})))
+          ;; Check if it's a query (contains :) or preset name
+          (if (string.find query-or-preset ":")
+              (pull.sync-stories query-or-preset)
+              ;; Try as preset first, fall back to query
+              (let [preset (config.get-preset query-or-preset)]
+                (if preset
+                    (pull.sync-preset query-or-preset)
+                    (pull.sync-stories query-or-preset)))))))
+
+(fn M.sync-all []
+  "Sync all configured presets"
+  (if (not (config.is-configured))
+      (notify.no-token)
+      (pull.sync-all-presets)))
+
+(fn M.cache-refresh [cache-type]
+  "Refresh a specific cache or all caches
+   cache-type: 'members', 'workflows', 'iterations', 'teams', or nil for all"
+  (if (not (config.is-configured))
+      (notify.no-token)
+      (if cache-type
+          (let [api-module (match cache-type
+                            :members (require :longway.api.members)
+                            :workflows (require :longway.api.workflows)
+                            :iterations (require :longway.api.iterations)
+                            :teams (require :longway.api.teams)
+                            _ nil)]
+            (if api-module
+                (do
+                  (notify.info (string.format "Refreshing %s cache..." cache-type))
+                  (let [result (api-module.refresh-cache)]
+                    (if result.ok
+                        (notify.info (string.format "%s cache refreshed" cache-type))
+                        (notify.error (string.format "Failed to refresh %s cache: %s" cache-type (or result.error "unknown"))))))
+                (notify.error (string.format "Unknown cache type: %s" cache-type))))
+          ;; Refresh all caches
+          (do
+            (notify.info "Refreshing all caches...")
+            (let [members (require :longway.api.members)
+                  workflows (require :longway.api.workflows)
+                  iterations (require :longway.api.iterations)
+                  teams (require :longway.api.teams)]
+              (members.refresh-cache)
+              (workflows.refresh-cache)
+              (iterations.refresh-cache)
+              (teams.refresh-cache)
+              (notify.info "All caches refreshed"))))))
+
+(fn M.cache-status []
+  "Show status of all caches"
+  (let [status (cache.get-status)]
+    (print "Cache Status:")
+    (print "-------------")
+    (each [cache-type info (pairs status)]
+      (let [state (if (not info.exists) "not cached"
+                      info.expired "expired"
+                      "valid")
+            age-str (if info.age
+                        (string.format "%d seconds ago" info.age)
+                        "never")]
+        (print (string.format "  %s: %s (%s)" cache-type state age-str))))))
+
+(fn M.list-presets []
+  "List all configured presets"
+  (let [presets (config.get-presets)
+        default (config.get-default-preset)]
+    (if (= (next presets) nil)
+        (notify.info "No presets configured")
+        (do
+          (print "Configured Presets:")
+          (print "-------------------")
+          (each [name preset (pairs presets)]
+            (let [is-default (= name default)
+                  marker (if is-default " (default)" "")]
+              (print (string.format "  %s%s" name marker))
+              (when preset.query
+                (print (string.format "    query: %s" preset.query)))
+              (when preset.description
+                (print (string.format "    desc: %s" preset.description)))))))))
 
 M

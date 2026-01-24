@@ -25,7 +25,7 @@ function M.setup(opts)
   end
 end
 
--- Expose core functions
+-- Expose core functions (Phase 1)
 M.pull = core.pull
 M.push = core.push
 M.refresh = core.refresh
@@ -33,9 +33,18 @@ M.open = core.open_in_browser
 M.status = core.status
 M.get_info = core.get_info
 
+-- Expose core functions (Phase 2)
+M.pull_epic = core.pull_epic
+M.sync = core.sync
+M.sync_all = core.sync_all
+M.cache_refresh = core.cache_refresh
+M.cache_status = core.cache_status
+M.list_presets = core.list_presets
+
 -- Expose config functions
 M.get_config = config.get
 M.is_configured = config.is_configured
+M.get_presets = config.get_presets
 
 -- Legacy function for compatibility
 M.hello = core.hello

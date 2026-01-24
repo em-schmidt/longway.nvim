@@ -170,4 +170,27 @@ function M.is_configured()
   return config._resolved_token ~= nil
 end
 
+function M.get_preset(name)
+  if config.presets and name then
+    return config.presets[name]
+  end
+  return nil
+end
+
+function M.get_presets()
+  return config.presets or {}
+end
+
+function M.get_default_preset()
+  return config.default_preset
+end
+
+function M.get_cache_dir()
+  return M.get_workspace_dir() .. "/.longway/cache"
+end
+
+function M.get_state_dir()
+  return M.get_workspace_dir() .. "/.longway/state"
+end
+
 return M
