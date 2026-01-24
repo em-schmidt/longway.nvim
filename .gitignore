@@ -4,8 +4,8 @@
 *~
 .DS_Store
 
-# Lua Language Server
-.luarc.json
+# Lua Language Server (user-specific settings)
+# Note: .luarc.json is tracked for consistent test development
 
 # Testing - ignore runtime artifacts but keep test config files
 .test/*

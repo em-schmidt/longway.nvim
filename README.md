@@ -181,7 +181,10 @@ This plugin is written in Fennel and compiled to Lua.
 │   ├── markdown/         # Markdown parsing/rendering
 │   ├── ui/               # UI helpers
 │   └── util/             # Utilities
+├── fnl/longway-spec/      # Test specifications (Fennel)
 ├── lua/longway/           # Compiled Lua (committed for distribution)
+├── lua/longway-spec/      # Compiled tests
+├── scripts/               # Development scripts
 ├── plugin/longway.lua     # Plugin entry point
 └── docs/
     ├── PRD.md            # Product requirements
@@ -192,10 +195,28 @@ This plugin is written in Fennel and compiled to Lua.
 
 If you have [nfnl](https://github.com/Olical/nfnl) installed, Fennel files compile automatically on save.
 
+### Testing
+
+```bash
+# Install test dependencies (one-time)
+./scripts/setup-test-deps
+
+# Run all tests
+./scripts/test
+
+# Or use make
+make test
+```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed testing instructions.
+
 ## License
 
 MIT
 
 ## Contributing
 
-Contributions are welcome! Please see the [PRD](docs/PRD.md) and [Implementation Plan](docs/IMPLEMENTATION_PLAN.md) for planned features.
+Contributions are welcome! Please see:
+- [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and testing
+- [PRD](docs/PRD.md) for the product roadmap
+- [Implementation Plan](docs/IMPLEMENTATION_PLAN.md) for planned features

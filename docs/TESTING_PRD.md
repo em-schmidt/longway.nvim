@@ -158,13 +158,25 @@ nvim --headless \
 
 ```lua
 -- Minimal init for testing
-vim.opt.runtimepath:append(".")
-vim.opt.runtimepath:append(".test/nvim/pack/test/start/plenary.nvim")
-vim.opt.runtimepath:append(".test/nvim/pack/test/start/nfnl")
-vim.opt.runtimepath:append(".test/nvim/pack/test/start/longway.nvim")
+-- This file sets up the Neovim environment for running tests
+
+-- Add plugin paths to runtimepath (prepend for higher priority)
+vim.opt.runtimepath:prepend(".")
+vim.opt.runtimepath:prepend(".test/nvim/pack/test/start/plenary.nvim")
+
+-- Disable swap files for testing
+vim.opt.swapfile = false
+
+-- Set up a mock config for testing (no real API token needed)
+vim.g.longway_test_mode = true
 
 -- Load plenary
-require("plenary")
+local ok, _ = pcall(require, "plenary")
+if not ok then
+    print("ERROR: Could not load plenary.nvim")
+    print("Run ./scripts/setup-test-deps first")
+    vim.cmd("cq 1")
+end
 ```
 
 ### 5. Create `.github/workflows/test.yaml`
@@ -185,7 +197,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
-        neovim-version: ['0.10.4', 'stable', 'nightly']
+        neovim-version: ['v0.10.4', 'stable', 'nightly']
 
     steps:
       - name: Checkout
@@ -589,7 +601,7 @@ Tests run automatically on:
 
 Matrix testing covers:
 - **Operating Systems**: Ubuntu, macOS
-- **Neovim Versions**: 0.10.4, stable, nightly
+- **Neovim Versions**: v0.10.4, stable, nightly
 
 ---
 
