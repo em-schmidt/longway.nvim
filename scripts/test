@@ -8,13 +8,11 @@ export XDG_STATE_HOME="$(pwd)/.test"
 
 echo "Compiling Fennel files..."
 
-# Compile all Fennel files using nfnl's Lua API
-# First trust the config file, then setup, then compile
+# Compile Fennel test files using Fennel directly (bypasses nfnl trust)
+# nfnl bundles Fennel, so we use it from there
 nvim --headless \
     -u .test/init.lua \
-    -c "lua require('nfnl.trust').trust(vim.fn.getcwd() .. '/.nfnl.fnl')" \
-    -c "lua require('nfnl').setup()" \
-    -c "lua require('nfnl.api')['compile-all-files']()" \
+    -c "lua local fennel = require('nfnl.fennel'); local function compile_file(src, dest) local f = io.open(src, 'r'); if not f then return end; local code = f:read('*a'); f:close(); local lua_code = fennel.compileString(code, {filename = src}); vim.fn.mkdir(vim.fn.fnamemodify(dest, ':h'), 'p'); local out = io.open(dest, 'w'); out:write(lua_code); out:close(); print('Compiled: ' .. src .. ' -> ' .. dest); end; for _, fnl_file in ipairs(vim.fn.glob('fnl/longway-spec/**/*.fnl', false, true)) do local lua_file = fnl_file:gsub('^fnl/', 'lua/'):gsub('%.fnl$', '.lua'); compile_file(fnl_file, lua_file); end" \
     -c "qa!"
 
 compile_exit=$?
@@ -26,7 +24,6 @@ fi
 # Verify compiled test files exist
 if [ ! -d "lua/longway-spec" ]; then
     echo "ERROR: Test files not compiled. lua/longway-spec/ directory missing."
-    echo "Check that nfnl is properly configured and .nfnl.fnl includes test patterns."
     exit 1
 fi
 
@@ -43,7 +40,6 @@ echo "Running tests..."
 echo ""
 
 # Run tests using PlenaryBustedDirectory
-# In headless mode, Plenary should exit after tests complete
 nvim --headless \
     -u .test/init.lua \
     -c "PlenaryBustedDirectory lua/longway-spec { minimal_init = '.test/init.lua', sequential = true }"
