@@ -41,48 +41,54 @@
       (fn []
         (it "is a function"
           (fn []
-            (assert.is_function cache.invalidate_all)))
+            (assert.is_function (. cache "invalidate-all"))))
 
         (it "returns ok"
           (fn []
-            (let [result (cache.invalidate_all)]
+            (let [invalidate-all (. cache "invalidate-all")
+                  result (invalidate-all)]
               (assert.is_true result.ok))))))
 
     (describe "get-or-fetch"
       (fn []
         (it "is a function"
           (fn []
-            (assert.is_function cache.get_or_fetch)))
+            (assert.is_function (. cache "get-or-fetch"))))
 
         (it "calls fetch function when cache is empty"
           (fn []
+            ;; Invalidate first to ensure cache is empty
+            (cache.invalidate :members)
             (var fetch-called false)
             (let [fetch-fn (fn []
                             (set fetch-called true)
-                            {:ok true :data {:test true}})]
-              (cache.get_or_fetch :test-cache fetch-fn)
+                            {:ok true :data {:test true}})
+                  get-or-fetch (. cache "get-or-fetch")]
+              (get-or-fetch :members fetch-fn)
               (assert.is_true fetch-called))))))
 
     (describe "get-age"
       (fn []
         (it "is a function"
           (fn []
-            (assert.is_function cache.get_age)))
+            (assert.is_function (. cache "get-age"))))
 
         (it "returns nil for missing cache"
           (fn []
-            (let [age (cache.get_age :nonexistent)]
+            (let [get-age (. cache "get-age")
+                  age (get-age :nonexistent)]
               (assert.is_nil age))))))
 
     (describe "get-status"
       (fn []
         (it "is a function"
           (fn []
-            (assert.is_function cache.get_status)))
+            (assert.is_function (. cache "get-status"))))
 
         (it "returns a table"
           (fn []
-            (let [status (cache.get_status)]
+            (let [get-status (. cache "get-status")
+                  status (get-status)]
               (assert.is_table status))))))
 
     (describe "refresh"

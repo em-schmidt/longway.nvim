@@ -1,97 +1,112 @@
--- Iterations API module for longway.nvim
--- Compiled from fnl/longway/api/iterations.fnl
-
+-- [nfnl] fnl/longway/api/iterations.fnl
 local client = require("longway.api.client")
 local cache = require("longway.cache.store")
-
 local M = {}
-
-function M.list()
+M.list = function()
   return client.get("/iterations")
 end
-
-function M.get(iteration_id)
+M.get = function(iteration_id)
   return client.get(string.format("/iterations/%s", iteration_id))
 end
-
-function M.list_cached()
-  return cache.get_or_fetch("iterations", M.list)
+M["list-cached"] = function()
+  return cache["get-or-fetch"]("iterations", M.list)
 end
-
-function M.refresh_cache()
+M["refresh-cache"] = function()
   return cache.refresh("iterations", M.list)
 end
-
-function M.find_by_name(name, iterations)
-  if not iterations then
-    local result = M.list_cached()
+M["find-by-name"] = function(name, iterations)
+  local iterations0
+  local or_1_ = iterations
+  if not or_1_ then
+    local result = M["list-cached"]()
     if result.ok then
-      iterations = result.data
+      or_1_ = result.data
+    else
+      or_1_ = nil
     end
   end
-  if not iterations then
-    return nil
-  end
+  iterations0 = or_1_
   local lower_name = string.lower(name)
-  for _, iteration in ipairs(iterations) do
-    local lower_iter_name = string.lower(iteration.name or "")
-    if string.find(lower_iter_name, lower_name, 1, true) then
-      return iteration
+  if iterations0 then
+    local found = nil
+    for _, iteration in ipairs(iterations0) do
+      if found then break end
+      local lower_iter_name = string.lower((iteration.name or ""))
+      if string.find(lower_iter_name, lower_name, 1, true) then
+        found = iteration
+      else
+      end
     end
+    return found
+  else
+    return nil
   end
-  return nil
 end
-
-function M.find_by_id(id, iterations)
-  if not iterations then
-    local result = M.list_cached()
+M["find-by-id"] = function(id, iterations)
+  local iterations0
+  local or_6_ = iterations
+  if not or_6_ then
+    local result = M["list-cached"]()
     if result.ok then
-      iterations = result.data
+      or_6_ = result.data
+    else
+      or_6_ = nil
     end
   end
-  if not iterations then
+  iterations0 = or_6_
+  if iterations0 then
+    local found = nil
+    for _, iteration in ipairs(iterations0) do
+      if found then break end
+      if (iteration.id == id) then
+        found = iteration
+      else
+      end
+    end
+    return found
+  else
     return nil
   end
-  for _, iteration in ipairs(iterations) do
-    if iteration.id == id then
-      return iteration
-    end
-  end
-  return nil
 end
-
-function M.get_current()
-  local result = M.list_cached()
-  if not result.ok then
+M["get-current"] = function()
+  local result = M["list-cached"]()
+  local now = os.time()
+  if result.ok then
+    local current = nil
+    for _, iteration in ipairs(result.data) do
+      if current then break end
+      local start_date = iteration.start_date
+      local end_date = iteration.end_date
+      if (start_date and end_date and iteration.status and (iteration.status == "started")) then
+        current = iteration
+      else
+      end
+    end
+    return current
+  else
     return nil
   end
-  for _, iteration in ipairs(result.data) do
-    if iteration.status and iteration.status == "started" then
-      return iteration
-    end
-  end
-  return nil
 end
-
-function M.get_upcoming()
-  local result = M.list_cached()
+M["get-upcoming"] = function()
+  local result = M["list-cached"]()
   local upcoming = {}
   if result.ok then
     for _, iteration in ipairs(result.data) do
-      if iteration.status == "unstarted" then
+      if (iteration.status == "unstarted") then
         table.insert(upcoming, iteration)
+      else
       end
     end
+  else
   end
   return upcoming
 end
-
-function M.resolve_name(iteration_id)
-  local iteration = M.find_by_id(iteration_id)
+M["resolve-name"] = function(iteration_id)
+  local iteration = M["find-by-id"](iteration_id)
   if iteration then
     return iteration.name
+  else
+    return tostring(iteration_id)
   end
-  return tostring(iteration_id)
 end
-
 return M

@@ -25,55 +25,57 @@
       (fn []
         (it "is a function"
           (fn []
-            (assert.is_function iterations.list_cached)))))
+            (assert.is_function (. iterations "list-cached"))))))
 
     (describe "refresh-cache"
       (fn []
         (it "is a function"
           (fn []
-            (assert.is_function iterations.refresh_cache)))))
+            (assert.is_function (. iterations "refresh-cache"))))))
 
     (describe "find-by-name"
       (fn []
         (it "is a function"
           (fn []
-            (assert.is_function iterations.find_by_name)))
+            (assert.is_function (. iterations "find-by-name"))))
 
         (it "finds iteration by partial name match"
           (fn []
             (let [test-iterations [{:id 1 :name "Sprint 1"}
                                    {:id 2 :name "Sprint 2"}
                                    {:id 3 :name "Backlog"}]
-                  result (iterations.find_by_name "sprint 2" test-iterations)]
+                  find-by-name (. iterations "find-by-name")
+                  result (find-by-name "sprint 2" test-iterations)]
               (assert.equals 2 result.id))))))
 
     (describe "find-by-id"
       (fn []
         (it "is a function"
           (fn []
-            (assert.is_function iterations.find_by_id)))
+            (assert.is_function (. iterations "find-by-id"))))
 
         (it "finds iteration by exact id"
           (fn []
             (let [test-iterations [{:id 1 :name "Sprint 1"}
                                    {:id 2 :name "Sprint 2"}]
-                  result (iterations.find_by_id 2 test-iterations)]
+                  find-by-id (. iterations "find-by-id")
+                  result (find-by-id 2 test-iterations)]
               (assert.equals "Sprint 2" result.name))))))
 
     (describe "get-current"
       (fn []
         (it "is a function"
           (fn []
-            (assert.is_function iterations.get_current)))))
+            (assert.is_function (. iterations "get-current"))))))
 
     (describe "get-upcoming"
       (fn []
         (it "is a function"
           (fn []
-            (assert.is_function iterations.get_upcoming)))))
+            (assert.is_function (. iterations "get-upcoming"))))))
 
     (describe "resolve-name"
       (fn []
         (it "is a function"
           (fn []
-            (assert.is_function iterations.resolve_name)))))))
+            (assert.is_function (. iterations "resolve-name"))))))))

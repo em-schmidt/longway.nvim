@@ -1,171 +1,131 @@
--- Markdown parser for longway.nvim
--- Compiled from fnl/longway/markdown/parser.fnl
-
+-- [nfnl] fnl/longway/markdown/parser.fnl
 local config = require("longway.config")
 local frontmatter = require("longway.markdown.frontmatter")
-
 local M = {}
-
 local function get_sync_markers(section_name)
   local cfg = config.get()
-  local start_marker = cfg.sync_start_marker:gsub("{section}", section_name)
-  local end_marker = cfg.sync_end_marker:gsub("{section}", section_name)
-  return start_marker, end_marker
+  local start_marker = string.gsub(cfg.sync_start_marker, "{section}", section_name)
+  local end_marker = string.gsub(cfg.sync_end_marker, "{section}", section_name)
+  return {start_marker, end_marker}
 end
-
 local function extract_sync_section(content, section_name)
-  local start_marker, end_marker = get_sync_markers(section_name)
-
-  -- Escape special pattern characters
-  local start_escaped = start_marker:gsub("[%-%.%+%[%]%(%)%$%^%%%?%*]", "%%%1")
-  local end_escaped = end_marker:gsub("[%-%.%+%[%]%(%)%$%^%%%?%*]", "%%%1")
-
-  local pattern = start_escaped .. "\n(.-)\n" .. end_escaped
-  return content:match(pattern)
+  local _let_1_ = get_sync_markers(section_name)
+  local start_marker = _let_1_[1]
+  local end_marker = _let_1_[2]
+  local start_escaped = string.gsub(start_marker, "[%-%.%+%[%]%(%)%$%^%%%?%*]", "%%%1")
+  local end_escaped = string.gsub(end_marker, "[%-%.%+%[%]%(%)%$%^%%%?%*]", "%%%1")
+  local pattern = (start_escaped .. "\n(.-)\n" .. end_escaped)
+  local result = string.match(content, pattern)
+  return result
 end
-
-function M.extract_description(content)
+M["extract-description"] = function(content)
   return extract_sync_section(content, "description")
 end
-
 local function parse_task_line(line)
-  -- Format: - [x] Task description <!-- task:123 @owner complete:true -->
   local checkbox_pattern = "^%s*%-%s*%[([x ])%]%s*(.+)$"
-  local checkbox, rest = line:match(checkbox_pattern)
-
-  if not checkbox then
+  local checkbox, rest = string.match(line, checkbox_pattern)
+  if checkbox then
+    local complete = (checkbox == "x")
+    local metadata_pattern = "(.-)%s*<!%-%-%s*task:(%S+)%s*(.-)%s*complete:(%S+)%s*%-%->"
+    local description, id, extras, complete_str = string.match(rest, metadata_pattern)
+    if description then
+      local _2_
+      if (id == "new") then
+        _2_ = nil
+      else
+        _2_ = tonumber(id)
+      end
+      return {description = string.gsub(description, "%s+$", ""), id = _2_, complete = complete, is_new = (id == "new"), owner_mention = string.match(extras, "@(%S+)")}
+    else
+      return {description = string.gsub(rest, "%s+$", ""), id = nil, complete = complete, is_new = true, owner_mention = nil}
+    end
+  else
     return nil
   end
-
-  local complete = checkbox == "x"
-
-  -- Extract metadata comment
-  local metadata_pattern = "(.-)%s*<!%-%-%s*task:(%S+)%s*(.-)%s*complete:(%S+)%s*%-%->"
-  local description, id, extras, complete_str = rest:match(metadata_pattern)
-
-  if description then
-    return {
-      description = description:gsub("%s+$", ""),
-      id = (id == "new") and nil or tonumber(id),
-      complete = complete,
-      is_new = (id == "new"),
-      owner_mention = extras:match("@(%S+)"),
-    }
-  else
-    -- No metadata - might be a new task without proper format
-    return {
-      description = rest:gsub("%s+$", ""),
-      id = nil,
-      complete = complete,
-      is_new = true,
-      owner_mention = nil,
-    }
-  end
 end
-
-function M.extract_tasks(content)
+M["extract-tasks"] = function(content)
   local tasks_content = extract_sync_section(content, "tasks")
   if not tasks_content then
     return {}
-  end
-
-  local tasks = {}
-  for line in tasks_content:gmatch("[^\n]+") do
-    local task = parse_task_line(line)
-    if task then
-      table.insert(tasks, task)
+  else
+    local tasks = {}
+    for line in string.gmatch(tasks_content, "[^\n]+") do
+      local task = parse_task_line(line)
+      if task then
+        table.insert(tasks, task)
+      else
+      end
     end
+    return tasks
   end
-  return tasks
 end
-
 local function parse_comment_block(block)
-  -- Format:
-  -- ---
-  -- **Author Name** · 2026-01-18 10:30 <!-- comment:123 -->
-  --
-  -- Comment text here
-  local header_pattern = "%*%*(.-)%*%*%s*·%s*([%d%-]+%s*[%d:]+)%s*<!%-%-%s*comment:(%S+)%s*%-%->"
-
+  local header_pattern = "%*%*(.-)%*%*%s*\194\183%s*([%d%-]+%s*[%d:]+)%s*<!%-%-%s*comment:(%S+)%s*%-%->"
   local lines = {}
-  local header_line = nil
   local found_header = false
-
-  for line in (block .. "\n"):gmatch("([^\n]*)\n") do
+  local header_line = nil
+  for line in string.gmatch((block .. "\n"), "([^\n]*)\n") do
     if not found_header then
-      local author, timestamp, id = line:match(header_pattern)
+      local author, timestamp, id = string.match(line, header_pattern)
       if author then
         found_header = true
-        header_line = {
-          author = author,
-          timestamp = timestamp,
-          id = (id == "new") and nil or tonumber(id),
-          is_new = (id == "new"),
-        }
+        local _8_
+        if (id == "new") then
+          _8_ = nil
+        else
+          _8_ = tonumber(id)
+        end
+        header_line = {author = author, timestamp = timestamp, id = _8_, is_new = (id == "new")}
+      else
       end
     else
-      -- Collect body lines (skip empty lines at start)
-      if #lines > 0 or not line:match("^%s*$") then
+      if ((#lines > 0) or not string.match(line, "^%s*$")) then
         table.insert(lines, line)
+      else
       end
     end
   end
-
   if header_line then
     header_line.text = table.concat(lines, "\n")
     return header_line
+  else
+    return nil
   end
-  return nil
 end
-
-function M.extract_comments(content)
+M["extract-comments"] = function(content)
   local comments_content = extract_sync_section(content, "comments")
   if not comments_content then
     return {}
-  end
-
-  local comments = {}
-  -- Split by --- separator
-  local blocks = vim.split(comments_content, "\n%-%-%-\n", { plain = false, trimempty = true })
-
-  for _, block in ipairs(blocks) do
-    local comment = parse_comment_block(block)
-    if comment then
-      table.insert(comments, comment)
+  else
+    local comments = {}
+    local blocks = vim.split(comments_content, "\n%-%-%-\n", {trimempty = true, plain = false})
+    for _, block in ipairs(blocks) do
+      local cmt = parse_comment_block(block)
+      if cmt then
+        table.insert(comments, cmt)
+      else
+      end
     end
+    return comments
   end
-  return comments
 end
-
-function M.parse(content)
+M.parse = function(content)
   local parsed_fm = frontmatter.parse(content)
-  local description = M.extract_description(content)
-  local tasks = M.extract_tasks(content)
-  local comments = M.extract_comments(content)
-
-  return {
-    frontmatter = parsed_fm.frontmatter,
-    description = description,
-    tasks = tasks,
-    comments = comments,
-    body = parsed_fm.body,
-    raw_frontmatter = parsed_fm.raw_frontmatter,
-  }
+  local description = M["extract-description"](content)
+  local tasks = M["extract-tasks"](content)
+  local comments = M["extract-comments"](content)
+  return {frontmatter = parsed_fm.frontmatter, description = description, tasks = tasks, comments = comments, body = parsed_fm.body, raw_frontmatter = parsed_fm.raw_frontmatter}
 end
-
-function M.get_shortcut_id(content)
+M["get-shortcut-id"] = function(content)
   local parsed = frontmatter.parse(content)
   return parsed.frontmatter.shortcut_id
 end
-
-function M.get_shortcut_type(content)
+M["get-shortcut-type"] = function(content)
   local parsed = frontmatter.parse(content)
-  return parsed.frontmatter.shortcut_type or "story"
+  return (parsed.frontmatter.shortcut_type or "story")
 end
-
-function M.is_longway_file(content)
+M["is-longway-file"] = function(content)
   local parsed = frontmatter.parse(content)
-  return parsed.frontmatter.shortcut_id ~= nil
+  return not not parsed.frontmatter.shortcut_id
 end
-
 return M

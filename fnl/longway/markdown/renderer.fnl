@@ -86,19 +86,19 @@
             (table.insert lines (render-task task cfg)))
           (render-sync-section "tasks" (table.concat lines "\n"))))))
 
-(fn render-comment [comment]
+(fn render-comment [cmt]
   "Render a single comment"
-  (let [author-name (or (and comment.author comment.author.profile comment.author.profile.name)
+  (let [author-name (or (and cmt.author cmt.author.profile cmt.author.profile.name)
                         "Unknown")
-        timestamp (if comment.created_at
-                      (string.sub comment.created_at 1 16)  ;; YYYY-MM-DDTHH:MM
+        timestamp (if cmt.created_at
+                      (string.sub cmt.created_at 1 16)  ;; YYYY-MM-DDTHH:MM
                       "")
         formatted-time (string.gsub timestamp "T" " ")
-        metadata (string.format "<!-- comment:%s -->" (tostring comment.id))]
+        metadata (string.format "<!-- comment:%s -->" (tostring cmt.id))]
     (table.concat ["---"
                    (string.format "**%s** · %s %s" author-name formatted-time metadata)
                    ""
-                   (or comment.text "")]
+                   (or cmt.text "")]
                   "\n")))
 
 (fn render-comments [comments]
@@ -106,8 +106,8 @@
   (if (or (not comments) (= (length comments) 0))
       (render-sync-section "comments" "")
       (let [lines []]
-        (each [_ comment (ipairs comments)]
-          (table.insert lines (render-comment comment)))
+        (each [_ cmt (ipairs comments)]
+          (table.insert lines (render-comment cmt)))
         (render-sync-section "comments" (table.concat lines "\n\n")))))
 
 (fn render-local-notes []

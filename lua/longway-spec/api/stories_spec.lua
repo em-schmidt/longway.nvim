@@ -1,3 +1,4 @@
+-- [nfnl] fnl/longway-spec/api/stories_spec.fnl
 local t = require("longway-spec.init")
 local stories = require("longway.api.stories")
 local function _1_()

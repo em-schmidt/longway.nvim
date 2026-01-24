@@ -1,101 +1,108 @@
--- Workflows API module for longway.nvim
--- Compiled from fnl/longway/api/workflows.fnl
-
+-- [nfnl] fnl/longway/api/workflows.fnl
 local client = require("longway.api.client")
 local cache = require("longway.cache.store")
-
 local M = {}
-
-function M.list()
+M.list = function()
   return client.get("/workflows")
 end
-
-function M.list_cached()
-  return cache.get_or_fetch("workflows", M.list)
+M["list-cached"] = function()
+  return cache["get-or-fetch"]("workflows", M.list)
 end
-
-function M.refresh_cache()
+M["refresh-cache"] = function()
   return cache.refresh("workflows", M.list)
 end
-
-function M.get_states(workflow)
-  return workflow.states or {}
+M["get-states"] = function(workflow)
+  return (workflow.states or {})
 end
-
-function M.get_all_states()
-  local result = M.list_cached()
+M["get-all-states"] = function()
+  local result = M["list-cached"]()
   if not result.ok then
     return result
-  end
-  local all_states = {}
-  for _, workflow in ipairs(result.data) do
-    for _, state in ipairs(M.get_states(workflow)) do
-      table.insert(all_states, state)
+  else
+    local all_states = {}
+    for _, workflow in ipairs(result.data) do
+      for _0, state in ipairs(M["get-states"](workflow)) do
+        table.insert(all_states, state)
+      end
     end
+    return {ok = true, data = all_states}
   end
-  return { ok = true, data = all_states }
 end
-
-function M.find_state_by_name(name, workflows)
-  if not workflows then
-    local result = M.list_cached()
+M["find-state-by-name"] = function(name, workflows)
+  local workflows0
+  local or_2_ = workflows
+  if not or_2_ then
+    local result = M["list-cached"]()
     if result.ok then
-      workflows = result.data
+      or_2_ = result.data
+    else
+      or_2_ = nil
     end
   end
-  if not workflows then
-    return nil
-  end
+  workflows0 = or_2_
   local lower_name = string.lower(name)
-  for _, workflow in ipairs(workflows) do
-    for _, state in ipairs(M.get_states(workflow)) do
-      local lower_state = string.lower(state.name or "")
-      if string.find(lower_state, lower_name, 1, true) then
-        return state
+  if workflows0 then
+    local found = nil
+    for _, workflow in ipairs(workflows0) do
+      if found then break end
+      for _0, state in ipairs(M["get-states"](workflow)) do
+        if found then break end
+        local lower_state = string.lower((state.name or ""))
+        if string.find(lower_state, lower_name, 1, true) then
+          found = state
+        else
+        end
       end
     end
-  end
-  return nil
-end
-
-function M.find_state_by_id(id, workflows)
-  if not workflows then
-    local result = M.list_cached()
-    if result.ok then
-      workflows = result.data
-    end
-  end
-  if not workflows then
+    return found
+  else
     return nil
   end
-  for _, workflow in ipairs(workflows) do
-    for _, state in ipairs(M.get_states(workflow)) do
-      if state.id == id then
-        return state
-      end
+end
+M["find-state-by-id"] = function(id, workflows)
+  local workflows0
+  local or_7_ = workflows
+  if not or_7_ then
+    local result = M["list-cached"]()
+    if result.ok then
+      or_7_ = result.data
+    else
+      or_7_ = nil
     end
   end
-  return nil
+  workflows0 = or_7_
+  if workflows0 then
+    local found = nil
+    for _, workflow in ipairs(workflows0) do
+      if found then break end
+      for _0, state in ipairs(M["get-states"](workflow)) do
+        if found then break end
+        if (state.id == id) then
+          found = state
+        else
+        end
+      end
+    end
+    return found
+  else
+    return nil
+  end
 end
-
-function M.get_state_type(state)
-  return state.type or "unstarted"
+M["get-state-type"] = function(state)
+  return (state.type or "unstarted")
 end
-
-function M.is_done_state(state)
-  return M.get_state_type(state) == "done"
+M["is-done-state"] = function(state)
+  return (M["get-state-type"](state) == "done")
 end
-
-function M.is_started_state(state)
-  return M.get_state_type(state) == "started"
+M["is-started-state"] = function(state)
+  return (M["get-state-type"](state) == "started")
 end
-
-function M.resolve_state_name(state_id)
-  local state = M.find_state_by_id(state_id)
+M["resolve-state-name"] = function(state_id)
+  local state = M["find-state-by-id"](state_id)
   if state then
     return state.name
+  else
+    return state_id
   end
-  return state_id
 end
-
 return M

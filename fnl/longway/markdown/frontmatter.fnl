@@ -96,11 +96,11 @@
               {:frontmatter {} :body content :raw_frontmatter nil}
               (let [yaml-content (string.sub content 5 (- end-start 1))
                     body (string.sub content (+ end-start 5))
-                    frontmatter {}
-                    current-key nil
-                    current-list nil
-                    current-obj nil
-                    indent-stack []]
+                    frontmatter {}]
+                ;; Mutable state for parsing
+                (var current-key nil)
+                (var current-list nil)
+                (var current-obj nil)
                 ;; Simple line-by-line YAML parser
                 (each [line (string.gmatch (.. yaml-content "\n") "([^\n]*)\n")]
                   (let [key-value (string.match line "^([%w_]+):%s*(.*)$")

@@ -38,15 +38,15 @@
     (let [content (vim.fn.readfile path)
           text (table.concat content "\n")]
       (when (> (length text) 0)
-        (let [ok data (pcall vim.json.decode text)]
+        (let [(ok data) (pcall vim.json.decode text)]
           (when ok data))))))
 
 (fn write-json-file [path data]
   "Write data as JSON to a file"
   (ensure-cache-dir)
-  (let [ok json (pcall vim.json.encode data)]
+  (let [(ok json) (pcall vim.json.encode data)]
     (when ok
-      (vim.fn.writefile [(json)] path)
+      (vim.fn.writefile [json] path)
       true)))
 
 (fn is-expired [cache-entry ttl]

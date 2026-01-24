@@ -1,82 +1,88 @@
--- Members API module for longway.nvim
--- Compiled from fnl/longway/api/members.fnl
-
+-- [nfnl] fnl/longway/api/members.fnl
 local client = require("longway.api.client")
 local cache = require("longway.cache.store")
-
 local M = {}
-
-function M.list()
+M.list = function()
   return client.get("/members")
 end
-
-function M.get_current()
+M["get-current"] = function()
   return client.get("/member")
 end
-
-function M.get(member_id)
+M.get = function(member_id)
   return client.get(string.format("/members/%s", member_id))
 end
-
-function M.list_cached()
-  return cache.get_or_fetch("members", M.list)
+M["list-cached"] = function()
+  return cache["get-or-fetch"]("members", M.list)
 end
-
-function M.refresh_cache()
+M["refresh-cache"] = function()
   return cache.refresh("members", M.list)
 end
-
-function M.find_by_name(name, members)
-  if not members then
-    local result = M.list_cached()
+M["find-by-name"] = function(name, members)
+  local members0
+  local or_1_ = members
+  if not or_1_ then
+    local result = M["list-cached"]()
     if result.ok then
-      members = result.data
+      or_1_ = result.data
+    else
+      or_1_ = nil
     end
   end
-  if not members then
-    return nil
-  end
+  members0 = or_1_
   local lower_name = string.lower(name)
-  for _, member in ipairs(members) do
-    local profile = member.profile or {}
-    local display_name = profile.name or profile.mention_name or member.id or ""
-    local lower_display = string.lower(display_name)
-    if string.find(lower_display, lower_name, 1, true) then
-      return member
+  if members0 then
+    local found = nil
+    for _, member in ipairs(members0) do
+      if found then break end
+      local profile = (member.profile or {})
+      local display_name = (profile.name or profile.mention_name or member.id or "")
+      local lower_display = string.lower(display_name)
+      if string.find(lower_display, lower_name, 1, true) then
+        found = member
+      else
+      end
     end
-  end
-  return nil
-end
-
-function M.find_by_id(id, members)
-  if not members then
-    local result = M.list_cached()
-    if result.ok then
-      members = result.data
-    end
-  end
-  if not members then
+    return found
+  else
     return nil
   end
-  for _, member in ipairs(members) do
-    if member.id == id then
-      return member
+end
+M["find-by-id"] = function(id, members)
+  local members0
+  local or_6_ = members
+  if not or_6_ then
+    local result = M["list-cached"]()
+    if result.ok then
+      or_6_ = result.data
+    else
+      or_6_ = nil
     end
   end
-  return nil
-end
-
-function M.get_display_name(member)
-  local profile = member.profile or {}
-  return profile.name or profile.mention_name or member.id or "Unknown"
-end
-
-function M.resolve_name(member_id)
-  local member = M.find_by_id(member_id)
-  if member then
-    return M.get_display_name(member)
+  members0 = or_6_
+  if members0 then
+    local found = nil
+    for _, member in ipairs(members0) do
+      if found then break end
+      if (member.id == id) then
+        found = member
+      else
+      end
+    end
+    return found
+  else
+    return nil
   end
-  return member_id
 end
-
+M["get-display-name"] = function(member)
+  local profile = (member.profile or {})
+  return (profile.name or profile.mention_name or member.id or "Unknown")
+end
+M["resolve-name"] = function(member_id)
+  local member = M["find-by-id"](member_id)
+  if member then
+    return M["get-display-name"](member)
+  else
+    return member_id
+  end
+end
 return M

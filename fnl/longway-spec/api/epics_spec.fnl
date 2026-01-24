@@ -43,19 +43,19 @@
       (fn []
         (it "is a function"
           (fn []
-            (assert.is_function epics.list_stories)))))
+            (assert.is_function (. epics "list-stories"))))))
 
     (describe "get-with-stories"
       (fn []
         (it "is a function"
           (fn []
-            (assert.is_function epics.get_with_stories)))))
+            (assert.is_function (. epics "get-with-stories"))))))
 
     (describe "get-stats"
       (fn []
         (it "is a function"
           (fn []
-            (assert.is_function epics.get_stats)))
+            (assert.is_function (. epics "get-stats"))))
 
         (it "calculates stats from epic data"
           (fn []
@@ -65,7 +65,8 @@
                                 :num_stories_unstarted 2
                                 :num_points 20
                                 :num_points_done 10}}
-                  stats (epics.get_stats epic)]
+                  get-stats (. epics "get-stats")
+                  stats (get-stats epic)]
               (assert.equals 10 stats.total)
               (assert.equals 5 stats.done)
               (assert.equals 3 stats.started)
@@ -75,16 +76,18 @@
       (fn []
         (it "is a function"
           (fn []
-            (assert.is_function epics.get_progress)))
+            (assert.is_function (. epics "get-progress"))))
 
         (it "calculates percentage progress"
           (fn []
             (let [epic {:stats {:num_stories 10 :num_stories_done 5}}
-                  progress (epics.get_progress epic)]
+                  get-progress (. epics "get-progress")
+                  progress (get-progress epic)]
               (assert.equals 50 progress))))
 
         (it "returns 0 for empty epic"
           (fn []
             (let [epic {:stats {:num_stories 0 :num_stories_done 0}}
-                  progress (epics.get_progress epic)]
+                  get-progress (. epics "get-progress")
+                  progress (get-progress epic)]
               (assert.equals 0 progress))))))))

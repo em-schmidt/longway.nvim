@@ -92,27 +92,31 @@
               ;; Non-ascii chars are removed, leaving what's valid
               (assert.is_valid_slug result))))))
 
-    (describe "make_filename"
+    (describe "make-filename"
       (fn []
         (it "generates filename with id and slug"
           (fn []
-            (let [result (slug.make_filename 12345 "My Story")]
+            (let [make-filename (. slug "make-filename")
+                  result (make-filename 12345 "My Story")]
               (assert.equals "12345-my-story.md" result))))
 
         (it "uses custom template from config"
           (fn []
             (t.setup-test-config {:filename_template "{slug}-{id}"})
-            (let [result (slug.make_filename 42 "Test Story")]
+            (let [make-filename (. slug "make-filename")
+                  result (make-filename 42 "Test Story")]
               (assert.equals "test-story-42.md" result))))
 
         (it "handles type placeholder"
           (fn []
             (t.setup-test-config {:filename_template "{type}/{id}-{slug}"})
-            (let [result (slug.make_filename 123 "Epic Name" "epic")]
+            (let [make-filename (. slug "make-filename")
+                  result (make-filename 123 "Epic Name" "epic")]
               (assert.equals "epic/123-epic-name.md" result))))
 
         (it "defaults type to story"
           (fn []
             (t.setup-test-config {:filename_template "{type}-{id}"})
-            (let [result (slug.make_filename 123 "Test")]
+            (let [make-filename (. slug "make-filename")
+                  result (make-filename 123 "Test")]
               (assert.equals "story-123.md" result))))))))

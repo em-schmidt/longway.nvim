@@ -10,7 +10,7 @@
   (fn []
     (before_each (fn [] (t.setup-test-config {})))
 
-    (describe "extract_description"
+    (describe "extract-description"
       (fn []
         (it "extracts content from description sync section"
           (fn []
@@ -19,13 +19,15 @@
 <!-- BEGIN SHORTCUT SYNC:description -->
 This is the description content.
 <!-- END SHORTCUT SYNC:description -->"
-                  result (parser.extract_description content)]
+                  extract-description (. parser "extract-description")
+                  result (extract-description content)]
               (assert.equals "This is the description content." result))))
 
         (it "returns nil when no description section"
           (fn []
             (let [content "# Title\n\nJust regular content."
-                  result (parser.extract_description content)]
+                  extract-description (. parser "extract-description")
+                  result (extract-description content)]
               (assert.is_nil result))))
 
         (it "handles multiline description"
@@ -35,19 +37,21 @@ Line 1
 Line 2
 Line 3
 <!-- END SHORTCUT SYNC:description -->"
-                  result (parser.extract_description content)]
+                  extract-description (. parser "extract-description")
+                  result (extract-description content)]
               (assert.has_substring result "Line 1")
               (assert.has_substring result "Line 2")
               (assert.has_substring result "Line 3"))))))
 
-    (describe "extract_tasks"
+    (describe "extract-tasks"
       (fn []
         (it "extracts incomplete tasks"
           (fn []
             (let [content "<!-- BEGIN SHORTCUT SYNC:tasks -->
 - [ ] Task one <!-- task:1 complete:false -->
 <!-- END SHORTCUT SYNC:tasks -->"
-                  result (parser.extract_tasks content)]
+                  extract-tasks (. parser "extract-tasks")
+                  result (extract-tasks content)]
               (assert.equals 1 (length result))
               (assert.equals "Task one" (. result 1 :description))
               (assert.is_false (. result 1 :complete)))))
@@ -57,7 +61,8 @@ Line 3
             (let [content "<!-- BEGIN SHORTCUT SYNC:tasks -->
 - [x] Done task <!-- task:2 complete:true -->
 <!-- END SHORTCUT SYNC:tasks -->"
-                  result (parser.extract_tasks content)]
+                  extract-tasks (. parser "extract-tasks")
+                  result (extract-tasks content)]
               (assert.equals 1 (length result))
               (assert.is_true (. result 1 :complete)))))
 
@@ -66,7 +71,8 @@ Line 3
             (let [content "<!-- BEGIN SHORTCUT SYNC:tasks -->
 - [ ] Task <!-- task:12345 complete:false -->
 <!-- END SHORTCUT SYNC:tasks -->"
-                  result (parser.extract_tasks content)]
+                  extract-tasks (. parser "extract-tasks")
+                  result (extract-tasks content)]
               (assert.equals 12345 (. result 1 :id)))))
 
         (it "handles new tasks without ID"
@@ -74,14 +80,16 @@ Line 3
             (let [content "<!-- BEGIN SHORTCUT SYNC:tasks -->
 - [ ] New task <!-- task:new complete:false -->
 <!-- END SHORTCUT SYNC:tasks -->"
-                  result (parser.extract_tasks content)]
+                  extract-tasks (. parser "extract-tasks")
+                  result (extract-tasks content)]
               (assert.is_nil (. result 1 :id))
               (assert.is_true (. result 1 :is_new)))))
 
         (it "returns empty array when no tasks section"
           (fn []
             (let [content "# No tasks here"
-                  result (parser.extract_tasks content)]
+                  extract-tasks (. parser "extract-tasks")
+                  result (extract-tasks content)]
               (assert.same [] result))))
 
         (it "extracts multiple tasks"
@@ -91,10 +99,11 @@ Line 3
 - [x] Second <!-- task:2 complete:true -->
 - [ ] Third <!-- task:3 complete:false -->
 <!-- END SHORTCUT SYNC:tasks -->"
-                  result (parser.extract_tasks content)]
+                  extract-tasks (. parser "extract-tasks")
+                  result (extract-tasks content)]
               (assert.equals 3 (length result)))))))
 
-    (describe "extract_comments"
+    (describe "extract-comments"
       (fn []
         (it "extracts comment author and text"
           (fn []
@@ -104,7 +113,8 @@ Line 3
 
 This is my comment.
 <!-- END SHORTCUT SYNC:comments -->"
-                  result (parser.extract_comments content)]
+                  extract-comments (. parser "extract-comments")
+                  result (extract-comments content)]
               (assert.equals 1 (length result))
               (assert.equals "John Doe" (. result 1 :author))
               (assert.has_substring (. result 1 :text) "This is my comment"))))
@@ -117,13 +127,15 @@ This is my comment.
 
 Comment text
 <!-- END SHORTCUT SYNC:comments -->"
-                  result (parser.extract_comments content)]
+                  extract-comments (. parser "extract-comments")
+                  result (extract-comments content)]
               (assert.equals 456 (. result 1 :id)))))
 
         (it "returns empty array when no comments section"
           (fn []
             (let [content "# No comments"
-                  result (parser.extract_comments content)]
+                  extract-comments (. parser "extract-comments")
+                  result (extract-comments content)]
               (assert.same [] result))))))
 
     (describe "parse"
@@ -144,28 +156,32 @@ Comment text
               (assert.equals 12345 result.frontmatter.shortcut_id)
               (assert.equals "story" result.frontmatter.shortcut_type))))))
 
-    (describe "get_shortcut_id"
+    (describe "get-shortcut-id"
       (fn []
         (it "extracts ID from frontmatter"
           (fn []
             (let [content (t.sample-markdown)
-                  result (parser.get_shortcut_id content)]
+                  get-shortcut-id (. parser "get-shortcut-id")
+                  result (get-shortcut-id content)]
               (assert.equals 12345 result))))
 
         (it "returns nil when no ID"
           (fn []
             (let [content "# No frontmatter"
-                  result (parser.get_shortcut_id content)]
+                  get-shortcut-id (. parser "get-shortcut-id")
+                  result (get-shortcut-id content)]
               (assert.is_nil result))))))
 
-    (describe "is_longway_file"
+    (describe "is-longway-file"
       (fn []
         (it "returns true for longway files"
           (fn []
-            (let [content (t.sample-markdown)]
-              (assert.is_true (parser.is_longway_file content)))))
+            (let [content (t.sample-markdown)
+                  is-longway-file (. parser "is-longway-file")]
+              (assert.is_true (is-longway-file content)))))
 
         (it "returns false for regular markdown"
           (fn []
-            (let [content "# Regular File\n\nJust content."]
-              (assert.is_false (parser.is_longway_file content)))))))))
+            (let [content "# Regular File\n\nJust content."
+                  is-longway-file (. parser "is-longway-file")]
+              (assert.is_false (is-longway-file content)))))))))

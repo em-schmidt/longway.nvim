@@ -37,49 +37,59 @@
                   result (hash.djb2 long-string)]
               (assert.is_valid_hash result))))))
 
-    (describe "content_hash"
+    (describe "content-hash"
       (fn []
         (it "normalizes line endings"
           (fn []
-            (let [hash1 (hash.content_hash "line1\nline2")
-                  hash2 (hash.content_hash "line1\r\nline2")]
+            (let [content-hash (. hash "content-hash")
+                  hash1 (content-hash "line1\nline2")
+                  hash2 (content-hash "line1\r\nline2")]
               (assert.equals hash1 hash2))))
 
         (it "normalizes trailing whitespace"
           (fn []
-            (let [hash1 (hash.content_hash "line1\nline2")
-                  hash2 (hash.content_hash "line1  \nline2  ")]
+            (let [content-hash (. hash "content-hash")
+                  hash1 (content-hash "line1\nline2")
+                  hash2 (content-hash "line1  \nline2  ")]
               (assert.equals hash1 hash2))))
 
         (it "trims leading and trailing whitespace"
           (fn []
-            (let [hash1 (hash.content_hash "content")
-                  hash2 (hash.content_hash "  \n  content  \n  ")]
+            (let [content-hash (. hash "content-hash")
+                  hash1 (content-hash "content")
+                  hash2 (content-hash "  \n  content  \n  ")]
               (assert.equals hash1 hash2))))
 
         (it "returns valid hash"
           (fn []
-            (let [result (hash.content_hash "Test content")]
+            (let [content-hash (. hash "content-hash")
+                  result (content-hash "Test content")]
               (assert.is_valid_hash result))))))
 
-    (describe "has_changed"
+    (describe "has-changed"
       (fn []
         (it "returns false when content matches hash"
           (fn []
-            (let [content "Test content"
-                  stored-hash (hash.content_hash content)]
-              (assert.is_false (hash.has_changed stored-hash content)))))
+            (let [content-hash (. hash "content-hash")
+                  has-changed (. hash "has-changed")
+                  content "Test content"
+                  stored-hash (content-hash content)]
+              (assert.is_false (has-changed stored-hash content)))))
 
         (it "returns true when content differs from hash"
           (fn []
-            (let [old-content "Original content"
+            (let [content-hash (. hash "content-hash")
+                  has-changed (. hash "has-changed")
+                  old-content "Original content"
                   new-content "Modified content"
-                  stored-hash (hash.content_hash old-content)]
-              (assert.is_true (hash.has_changed stored-hash new-content)))))
+                  stored-hash (content-hash old-content)]
+              (assert.is_true (has-changed stored-hash new-content)))))
 
         (it "handles whitespace normalization in comparison"
           (fn []
-            (let [content "Test content"
-                  stored-hash (hash.content_hash content)
+            (let [content-hash (. hash "content-hash")
+                  has-changed (. hash "has-changed")
+                  content "Test content"
+                  stored-hash (content-hash content)
                   content-with-whitespace "  Test content  \n"]
-              (assert.is_false (hash.has_changed stored-hash content-with-whitespace)))))))))
+              (assert.is_false (has-changed stored-hash content-with-whitespace)))))))))
