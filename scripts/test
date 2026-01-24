@@ -9,9 +9,10 @@ export XDG_STATE_HOME="$(pwd)/.test"
 echo "Compiling Fennel files..."
 
 # Compile all Fennel files using nfnl's Lua API
-# Note: Fennel function names use hyphens, accessed via bracket notation in Lua
+# First trust the config file, then setup, then compile
 nvim --headless \
     -u .test/init.lua \
+    -c "lua require('nfnl.trust').trust(vim.fn.getcwd() .. '/.nfnl.fnl')" \
     -c "lua require('nfnl').setup()" \
     -c "lua require('nfnl.api')['compile-all-files']()" \
     -c "qa!"
