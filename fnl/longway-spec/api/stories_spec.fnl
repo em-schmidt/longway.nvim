@@ -39,44 +39,44 @@
           (fn []
             (assert.is_function stories.search)))))
 
-    (describe "list-for-epic"
+    (describe "list_for_epic"
       (fn []
         (it "is a function"
           (fn []
-            (assert.is_function stories.list-for-epic)))))
+            (assert.is_function stories.list_for_epic)))))
 
-    (describe "create-task"
+    (describe "create_task"
       (fn []
         (it "is a function"
           (fn []
-            (assert.is_function stories.create-task)))))
+            (assert.is_function stories.create_task)))))
 
-    (describe "update-task"
+    (describe "update_task"
       (fn []
         (it "is a function"
           (fn []
-            (assert.is_function stories.update-task)))))
+            (assert.is_function stories.update_task)))))
 
-    (describe "delete-task"
+    (describe "delete_task"
       (fn []
         (it "is a function"
           (fn []
-            (assert.is_function stories.delete-task)))))
+            (assert.is_function stories.delete_task)))))
 
-    (describe "list-comments"
+    (describe "list_comments"
       (fn []
         (it "is a function"
           (fn []
-            (assert.is_function stories.list-comments)))))
+            (assert.is_function stories.list_comments)))))
 
-    (describe "create-comment"
+    (describe "create_comment"
       (fn []
         (it "is a function"
           (fn []
-            (assert.is_function stories.create-comment)))))
+            (assert.is_function stories.create_comment)))))
 
-    (describe "delete-comment"
+    (describe "delete_comment"
       (fn []
         (it "is a function"
           (fn []
-            (assert.is_function stories.delete-comment)))))))
+            (assert.is_function stories.delete_comment)))))))

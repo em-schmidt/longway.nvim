@@ -11,21 +11,21 @@
 
     (describe "module structure"
       (fn []
-        (it "exports pull-story function"
+        (it "exports pull_story function"
           (fn []
-            (assert.is_function pull.pull-story)))
+            (assert.is_function pull.pull_story)))
 
-        (it "exports pull-story-to-buffer function"
+        (it "exports pull_story_to_buffer function"
           (fn []
-            (assert.is_function pull.pull-story-to-buffer)))
+            (assert.is_function pull.pull_story_to_buffer)))
 
-        (it "exports refresh-current-buffer function"
+        (it "exports refresh_current_buffer function"
           (fn []
-            (assert.is_function pull.refresh-current-buffer)))))
+            (assert.is_function pull.refresh_current_buffer)))))
 
-    (describe "pull-story"
+    (describe "pull_story"
       (fn []
         (it "requires a story ID argument"
           (fn []
             ;; Function should exist and be callable
-            (assert.is_function pull.pull-story)))))))
+            (assert.is_function pull.pull_story)))))))

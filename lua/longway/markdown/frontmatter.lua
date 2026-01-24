@@ -80,7 +80,7 @@ function M.generate(data)
   end
 
   table.insert(lines, "---")
-  return table.concat(lines, "\n")
+  return table.concat(lines, "\n") .. "\n"
 end
 
 local function parse_yaml_value(str)

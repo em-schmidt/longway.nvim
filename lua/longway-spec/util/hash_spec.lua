@@ -1,4 +1,3 @@
--- [nfnl] fnl/longway-spec/util/hash_spec.fnl
 require("longway-spec.assertions")
 local hash = require("longway.util.hash")
 local function _1_()
@@ -35,52 +34,52 @@ local function _1_()
   describe("djb2", _2_)
   local function _8_()
     local function _9_()
-      local hash1 = hash["content-hash"]("line1\nline2")
-      local hash2 = hash["content-hash"]("line1\r\nline2")
+      local hash1 = hash.content_hash("line1\nline2")
+      local hash2 = hash.content_hash("line1\r\nline2")
       return assert.equals(hash1, hash2)
     end
     it("normalizes line endings", _9_)
     local function _10_()
-      local hash1 = hash["content-hash"]("line1\nline2")
-      local hash2 = hash["content-hash"]("line1  \nline2  ")
+      local hash1 = hash.content_hash("line1\nline2")
+      local hash2 = hash.content_hash("line1  \nline2  ")
       return assert.equals(hash1, hash2)
     end
     it("normalizes trailing whitespace", _10_)
     local function _11_()
-      local hash1 = hash["content-hash"]("content")
-      local hash2 = hash["content-hash"]("  \n  content  \n  ")
+      local hash1 = hash.content_hash("content")
+      local hash2 = hash.content_hash("  \n  content  \n  ")
       return assert.equals(hash1, hash2)
     end
     it("trims leading and trailing whitespace", _11_)
     local function _12_()
-      local result = hash["content-hash"]("Test content")
+      local result = hash.content_hash("Test content")
       return assert.is_valid_hash(result)
     end
     return it("returns valid hash", _12_)
   end
-  describe("content-hash", _8_)
+  describe("content_hash", _8_)
   local function _13_()
     local function _14_()
       local content = "Test content"
-      local stored_hash = hash["content-hash"](content)
-      return assert.is_false(hash["has-changed"](stored_hash, content))
+      local stored_hash = hash.content_hash(content)
+      return assert.is_false(hash.has_changed(stored_hash, content))
     end
     it("returns false when content matches hash", _14_)
     local function _15_()
       local old_content = "Original content"
       local new_content = "Modified content"
-      local stored_hash = hash["content-hash"](old_content)
-      return assert.is_true(hash["has-changed"](stored_hash, new_content))
+      local stored_hash = hash.content_hash(old_content)
+      return assert.is_true(hash.has_changed(stored_hash, new_content))
     end
     it("returns true when content differs from hash", _15_)
     local function _16_()
       local content = "Test content"
-      local stored_hash = hash["content-hash"](content)
+      local stored_hash = hash.content_hash(content)
       local content_with_whitespace = "  Test content  \n"
-      return assert.is_false(hash["has-changed"](stored_hash, content_with_whitespace))
+      return assert.is_false(hash.has_changed(stored_hash, content_with_whitespace))
     end
     return it("handles whitespace normalization in comparison", _16_)
   end
-  return describe("has-changed", _13_)
+  return describe("has_changed", _13_)
 end
 return describe("longway.util.hash", _1_)

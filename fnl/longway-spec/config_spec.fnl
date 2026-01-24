@@ -52,49 +52,49 @@
               (assert.is_not_nil cfg.sync_start_marker)
               (assert.is_not_nil cfg.sync_end_marker))))))
 
-    (describe "get-workspace-dir"
+    (describe "get_workspace_dir"
       (fn []
         (it "returns expanded workspace directory"
           (fn []
             (config.setup {:workspace_dir "/test/path"})
-            (let [result (config.get-workspace-dir)]
+            (let [result (config.get_workspace_dir)]
               (assert.equals "/test/path" result))))
 
         (it "expands home directory"
           (fn []
             (config.setup {:workspace_dir "~/shortcut"})
-            (let [result (config.get-workspace-dir)]
+            (let [result (config.get_workspace_dir)]
               ;; Should not start with ~ after expansion
               (assert.is_nil (string.match result "^~")))))))
 
-    (describe "get-stories-dir"
+    (describe "get_stories_dir"
       (fn []
         (it "combines workspace dir and stories subdir"
           (fn []
             (config.setup {:workspace_dir "/test" :stories_subdir "stories"})
-            (let [result (config.get-stories-dir)]
+            (let [result (config.get_stories_dir)]
               (assert.equals "/test/stories" result))))))
 
-    (describe "get-epics-dir"
+    (describe "get_epics_dir"
       (fn []
         (it "combines workspace dir and epics subdir"
           (fn []
             (config.setup {:workspace_dir "/test" :epics_subdir "epics"})
-            (let [result (config.get-epics-dir)]
+            (let [result (config.get_epics_dir)]
               (assert.equals "/test/epics" result))))))
 
-    (describe "is-configured"
+    (describe "is_configured"
       (fn []
         (it "returns true when token is set"
           (fn []
             (config.setup {:token "test-token"})
-            (assert.is_true (config.is-configured))))
+            (assert.is_true (config.is_configured))))
 
         (it "returns false when no token"
           (fn []
             ;; Reset to simulate no token
             (config.setup {})
             ;; Note: depends on env var not being set
-            (let [result (config.is-configured)]
+            (let [result (config.is_configured)]
               ;; This might be true if SHORTCUT_API_TOKEN is set in env
               (assert.is_boolean result))))))))

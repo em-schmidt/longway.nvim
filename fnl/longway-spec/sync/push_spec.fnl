@@ -11,21 +11,21 @@
 
     (describe "module structure"
       (fn []
-        (it "exports push-current-buffer function"
+        (it "exports push_current_buffer function"
           (fn []
-            (assert.is_function push.push-current-buffer)))
+            (assert.is_function push.push_current_buffer)))
 
-        (it "exports push-story function"
+        (it "exports push_story function"
           (fn []
-            (assert.is_function push.push-story)))
+            (assert.is_function push.push_story)))
 
-        (it "exports push-file function"
+        (it "exports push_file function"
           (fn []
-            (assert.is_function push.push-file)))))
+            (assert.is_function push.push_file)))))
 
-    (describe "push-story"
+    (describe "push_story"
       (fn []
-        (it "requires story-id and parsed arguments"
+        (it "requires story_id and parsed arguments"
           (fn []
             ;; Function should exist and be callable
-            (assert.is_function push.push-story)))))))
+            (assert.is_function push.push_story)))))))

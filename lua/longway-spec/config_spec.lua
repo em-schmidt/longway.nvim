@@ -1,4 +1,3 @@
--- [nfnl] fnl/longway-spec/config_spec.fnl
 local config = require("longway.config")
 local function _1_()
   local function _2_()
@@ -50,49 +49,49 @@ local function _1_()
   local function _10_()
     local function _11_()
       config.setup({workspace_dir = "/test/path"})
-      local result = config["get-workspace-dir"]()
+      local result = config.get_workspace_dir()
       return assert.equals("/test/path", result)
     end
     it("returns expanded workspace directory", _11_)
     local function _12_()
       config.setup({workspace_dir = "~/shortcut"})
-      local result = config["get-workspace-dir"]()
+      local result = config.get_workspace_dir()
       return assert.is_nil(string.match(result, "^~"))
     end
     return it("expands home directory", _12_)
   end
-  describe("get-workspace-dir", _10_)
+  describe("get_workspace_dir", _10_)
   local function _13_()
     local function _14_()
       config.setup({workspace_dir = "/test", stories_subdir = "stories"})
-      local result = config["get-stories-dir"]()
+      local result = config.get_stories_dir()
       return assert.equals("/test/stories", result)
     end
     return it("combines workspace dir and stories subdir", _14_)
   end
-  describe("get-stories-dir", _13_)
+  describe("get_stories_dir", _13_)
   local function _15_()
     local function _16_()
       config.setup({workspace_dir = "/test", epics_subdir = "epics"})
-      local result = config["get-epics-dir"]()
+      local result = config.get_epics_dir()
       return assert.equals("/test/epics", result)
     end
     return it("combines workspace dir and epics subdir", _16_)
   end
-  describe("get-epics-dir", _15_)
+  describe("get_epics_dir", _15_)
   local function _17_()
     local function _18_()
       config.setup({token = "test-token"})
-      return assert.is_true(config["is-configured"]())
+      return assert.is_true(config.is_configured())
     end
     it("returns true when token is set", _18_)
     local function _19_()
       config.setup({})
-      local result = config["is-configured"]()
+      local result = config.is_configured()
       return assert.is_boolean(result)
     end
     return it("returns false when no token", _19_)
   end
-  return describe("is-configured", _17_)
+  return describe("is_configured", _17_)
 end
 return describe("longway.config", _1_)
