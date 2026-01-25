@@ -20,6 +20,7 @@ fi
 
 # Install tools defined in .mise.toml
 cd "$CLAUDE_PROJECT_DIR"
+mise trust .mise.toml
 mise install
 
 # Activate mise environment
