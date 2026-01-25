@@ -12,17 +12,21 @@ fi
 
 echo "=== Setting up longway.nvim development environment ==="
 
-# Install neovim and dependencies
-sudo apt-get update -qq
-sudo apt-get install -y -qq \
-  neovim \
-  luarocks \
-  lua5.1 \
-  liblua5.1-dev \
-  git
+# Install mise if not present
+if ! command -v mise &> /dev/null; then
+  curl https://mise.run | sh
+  export PATH="$HOME/.local/bin:$PATH"
+fi
 
-# Install fennel via luarocks
-sudo luarocks install fennel
+# Install tools defined in .mise.toml
+cd "$CLAUDE_PROJECT_DIR"
+mise install
+
+# Activate mise environment
+eval "$(mise activate bash)"
+
+# Install fennel via luarocks (now available via mise)
+luarocks install fennel --local
 
 # Clone nfnl for development
 NFNL_DIR="$HOME/.local/share/nvim/site/pack/nfnl/start/nfnl"
@@ -32,12 +36,15 @@ if [ ! -d "$NFNL_DIR" ]; then
   echo "nfnl installed to $NFNL_DIR"
 fi
 
-# Persist environment variables for subsequent bash commands
+# Persist environment for subsequent bash commands
 if [ -n "$CLAUDE_ENV_FILE" ]; then
+  echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$CLAUDE_ENV_FILE"
+  echo 'eval "$(mise activate bash)"' >> "$CLAUDE_ENV_FILE"
   echo 'export PATH="$HOME/.luarocks/bin:$PATH"' >> "$CLAUDE_ENV_FILE"
 fi
 
 echo "=== Environment ready ==="
 echo "  - neovim: $(nvim --version | head -1)"
+echo "  - lua: $(lua -v)"
 echo "  - fennel: $(fennel --version 2>/dev/null || echo 'installed via luarocks')"
 echo "  - nfnl: $NFNL_DIR"
