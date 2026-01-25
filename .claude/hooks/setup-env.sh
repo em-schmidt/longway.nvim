@@ -20,13 +20,26 @@ fi
 
 # Install tools defined in .mise.toml
 cd "$CLAUDE_PROJECT_DIR"
+mise trust .mise.toml 2>/dev/null || true
 mise install
 
 # Activate mise environment
 eval "$(mise activate bash)"
 
-# Install fennel via luarocks (now available via mise)
-luarocks install fennel --local
+# Install luarocks manually (mise's lua plugin has compatibility issues)
+if ! command -v luarocks &> /dev/null; then
+  LUAROCKS_VERSION="3.11.1"
+  cd /tmp
+  curl -sL -o luarocks.tar.gz "https://luarocks.org/releases/luarocks-${LUAROCKS_VERSION}.tar.gz"
+  tar zxf luarocks.tar.gz
+  cd "luarocks-${LUAROCKS_VERSION}"
+  ./configure --prefix="$HOME/.local" --with-lua="$(mise where lua)" --with-lua-include="$(mise where lua)/include"
+  make && make install
+  cd "$CLAUDE_PROJECT_DIR"
+fi
+
+# Install fennel via luarocks (use 1.4.0 for Lua 5.1 compatibility)
+luarocks install fennel 1.4.0 --tree="$HOME/.luarocks"
 
 # Clone nfnl for development
 NFNL_DIR="$HOME/.local/share/nvim/site/pack/nfnl/start/nfnl"
