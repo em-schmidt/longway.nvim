@@ -1,3 +1,4 @@
+-- [nfnl] fnl/longway-spec/util/slug_spec.fnl
 local t = require("longway-spec.init")
 require("longway-spec.assertions")
 local slug = require("longway.util.slug")
@@ -91,29 +92,33 @@ local function _1_()
   describe("generate", _19_)
   local function _23_()
     local function _24_()
-      local result = slug.make_filename(12345, "My Story")
+      local make_filename = slug["make-filename"]
+      local result = make_filename(12345, "My Story")
       return assert.equals("12345-my-story.md", result)
     end
     it("generates filename with id and slug", _24_)
     local function _25_()
       t["setup-test-config"]({filename_template = "{slug}-{id}"})
-      local result = slug.make_filename(42, "Test Story")
+      local make_filename = slug["make-filename"]
+      local result = make_filename(42, "Test Story")
       return assert.equals("test-story-42.md", result)
     end
     it("uses custom template from config", _25_)
     local function _26_()
       t["setup-test-config"]({filename_template = "{type}/{id}-{slug}"})
-      local result = slug.make_filename(123, "Epic Name", "epic")
+      local make_filename = slug["make-filename"]
+      local result = make_filename(123, "Epic Name", "epic")
       return assert.equals("epic/123-epic-name.md", result)
     end
     it("handles type placeholder", _26_)
     local function _27_()
       t["setup-test-config"]({filename_template = "{type}-{id}"})
-      local result = slug.make_filename(123, "Test")
+      local make_filename = slug["make-filename"]
+      local result = make_filename(123, "Test")
       return assert.equals("story-123.md", result)
     end
     return it("defaults type to story", _27_)
   end
-  return describe("make_filename", _23_)
+  return describe("make-filename", _23_)
 end
 return describe("longway.util.slug", _1_)

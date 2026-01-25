@@ -26,7 +26,7 @@
             {:ok true :data nil})
         ;; Error
         (let [error-msg (if (and body (> (length body) 0))
-                            (let [ok err-data (pcall vim.json.decode body)]
+                            (let [(ok err-data) (pcall vim.json.decode body)]
                               (if ok
                                   (or err-data.message err-data.error body)
                                   body))
@@ -57,7 +57,7 @@
 
           (notify.debug (string.format "API %s %s" method endpoint))
 
-          (let [ok response (pcall curl.request request-opts)]
+          (let [(ok response) (pcall curl.request request-opts)]
             (if ok
                 (handle-response response)
                 {:ok false :error (tostring response)}))))))

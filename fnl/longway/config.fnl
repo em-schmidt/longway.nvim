@@ -152,4 +152,28 @@
   "Check if plugin is properly configured with a token"
   (not (not config._resolved_token)))
 
+(fn M.get-preset [name]
+  "Get a preset by name
+   Returns: preset table or nil"
+  (when (and config.presets name)
+    (. config.presets name)))
+
+(fn M.get-presets []
+  "Get all configured presets
+   Returns: table of name -> preset"
+  (or config.presets {}))
+
+(fn M.get-default-preset []
+  "Get the default preset name
+   Returns: string or nil"
+  config.default_preset)
+
+(fn M.get-cache-dir []
+  "Get the cache directory path"
+  (.. (M.get-workspace-dir) "/.longway/cache"))
+
+(fn M.get-state-dir []
+  "Get the sync state directory path"
+  (.. (M.get-workspace-dir) "/.longway/state"))
+
 M

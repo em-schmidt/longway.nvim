@@ -1,3 +1,4 @@
+-- [nfnl] fnl/longway-spec/api/stories_spec.fnl
 local t = require("longway-spec.init")
 local stories = require("longway.api.stories")
 local function _1_()
@@ -36,52 +37,52 @@ local function _1_()
   describe("search", _9_)
   local function _11_()
     local function _12_()
-      return assert.is_function(stories.list_for_epic)
+      return assert.is_function(stories["list-for-epic"])
     end
     return it("is a function", _12_)
   end
-  describe("list_for_epic", _11_)
+  describe("list-for-epic", _11_)
   local function _13_()
     local function _14_()
-      return assert.is_function(stories.create_task)
+      return assert.is_function(stories["create-task"])
     end
     return it("is a function", _14_)
   end
-  describe("create_task", _13_)
+  describe("create-task", _13_)
   local function _15_()
     local function _16_()
-      return assert.is_function(stories.update_task)
+      return assert.is_function(stories["update-task"])
     end
     return it("is a function", _16_)
   end
-  describe("update_task", _15_)
+  describe("update-task", _15_)
   local function _17_()
     local function _18_()
-      return assert.is_function(stories.delete_task)
+      return assert.is_function(stories["delete-task"])
     end
     return it("is a function", _18_)
   end
-  describe("delete_task", _17_)
+  describe("delete-task", _17_)
   local function _19_()
     local function _20_()
-      return assert.is_function(stories.list_comments)
+      return assert.is_function(stories["list-comments"])
     end
     return it("is a function", _20_)
   end
-  describe("list_comments", _19_)
+  describe("list-comments", _19_)
   local function _21_()
     local function _22_()
-      return assert.is_function(stories.create_comment)
+      return assert.is_function(stories["create-comment"])
     end
     return it("is a function", _22_)
   end
-  describe("create_comment", _21_)
+  describe("create-comment", _21_)
   local function _23_()
     local function _24_()
-      return assert.is_function(stories.delete_comment)
+      return assert.is_function(stories["delete-comment"])
     end
     return it("is a function", _24_)
   end
-  return describe("delete_comment", _23_)
+  return describe("delete-comment", _23_)
 end
 return describe("longway.api.stories", _1_)

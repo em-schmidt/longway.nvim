@@ -1,101 +1,218 @@
--- Core functionality for longway.nvim
--- Compiled from fnl/longway/core.fnl
-
+-- [nfnl] fnl/longway/core.fnl
 local config = require("longway.config")
 local pull = require("longway.sync.pull")
 local push = require("longway.sync.push")
 local notify = require("longway.ui.notify")
-
+local cache = require("longway.cache.store")
 local M = {}
-
-function M.hello()
-  print("Hello from longway.nvim!")
+M.hello = function()
+  return print("Hello from longway.nvim!")
 end
-
-function M.get_info()
+M["get-info"] = function()
   local cfg = config.get()
-  return {
-    name = "longway.nvim",
-    version = "0.1.0",
-    author = "Eric Schmidt",
-    configured = config.is_configured(),
-    workspace_dir = config.get_workspace_dir(),
-    debug = cfg.debug,
-  }
+  return {name = "longway.nvim", version = "0.2.0", author = "Eric Schmidt", configured = config["is-configured"](), workspace_dir = config["get-workspace-dir"](), presets = config["get-presets"](), debug = cfg.debug}
 end
-
-function M.pull(story_id)
-  if not config.is_configured() then
-    notify.no_token()
-    return
+M.pull = function(story_id)
+  if not config["is-configured"]() then
+    return notify["no-token"]()
+  else
+    return pull["pull-story-to-buffer"](story_id)
   end
-  return pull.pull_story_to_buffer(story_id)
 end
-
-function M.push()
-  if not config.is_configured() then
-    notify.no_token()
-    return
+M.push = function()
+  if not config["is-configured"]() then
+    return notify["no-token"]()
+  else
+    return push["push-current-buffer"]()
   end
-  return push.push_current_buffer()
 end
-
-function M.refresh()
-  if not config.is_configured() then
-    notify.no_token()
-    return
+M.refresh = function()
+  if not config["is-configured"]() then
+    return notify["no-token"]()
+  else
+    return pull["refresh-current-buffer"]()
   end
-  return pull.refresh_current_buffer()
 end
-
-function M.open_in_browser()
+M["open-in-browser"] = function()
   local bufnr = vim.api.nvim_get_current_buf()
   local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
   local content = table.concat(lines, "\n")
   local parser = require("longway.markdown.parser")
   local parsed = parser.parse(content)
   local url = parsed.frontmatter.shortcut_url
-
   if url then
     vim.ui.open(url)
-    notify.info(string.format("Opening %s", url))
+    return notify.info(string.format("Opening %s", url))
   else
-    notify.error("No shortcut_url found in frontmatter")
+    return notify.error("No shortcut_url found in frontmatter")
   end
 end
-
-function M.status()
+M.status = function()
   local bufnr = vim.api.nvim_get_current_buf()
   local filepath = vim.api.nvim_buf_get_name(bufnr)
-
-  if filepath == "" then
-    notify.error("No file in current buffer")
-    return
-  end
-
-  local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
-  local content = table.concat(lines, "\n")
-  local parser = require("longway.markdown.parser")
-  local parsed = parser.parse(content)
-  local fm = parsed.frontmatter
-
-  if not fm.shortcut_id then
-    notify.info("Not a longway-managed file")
-    return
-  end
-
-  print(string.format("Shortcut ID: %s", tostring(fm.shortcut_id)))
-  print(string.format("Type: %s", fm.shortcut_type or "story"))
-  print(string.format("State: %s", fm.state or "unknown"))
-  if fm.shortcut_url then
-    print(string.format("URL: %s", fm.shortcut_url))
-  end
-  if fm.updated_at then
-    print(string.format("Last updated: %s", fm.updated_at))
-  end
-  if fm.local_updated_at then
-    print(string.format("Local updated: %s", fm.local_updated_at))
+  if (filepath == "") then
+    return notify.error("No file in current buffer")
+  else
+    local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+    local content = table.concat(lines, "\n")
+    local parser = require("longway.markdown.parser")
+    local parsed = parser.parse(content)
+    local fm = parsed.frontmatter
+    if not fm.shortcut_id then
+      return notify.info("Not a longway-managed file")
+    else
+      print(string.format("Shortcut ID: %s", tostring(fm.shortcut_id)))
+      print(string.format("Type: %s", (fm.shortcut_type or "story")))
+      print(string.format("State: %s", (fm.state or "unknown")))
+      if fm.shortcut_url then
+        print(string.format("URL: %s", fm.shortcut_url))
+      else
+      end
+      if fm.updated_at then
+        print(string.format("Last updated: %s", fm.updated_at))
+      else
+      end
+      if fm.local_updated_at then
+        return print(string.format("Local updated: %s", fm.local_updated_at))
+      else
+        return nil
+      end
+    end
   end
 end
-
+M["pull-epic"] = function(epic_id)
+  if not config["is-configured"]() then
+    return notify["no-token"]()
+  else
+    return pull["pull-epic-to-buffer"](epic_id)
+  end
+end
+M.sync = function(query_or_preset)
+  if not config["is-configured"]() then
+    return notify["no-token"]()
+  else
+    if not query_or_preset then
+      local default_preset = config["get-default-preset"]()
+      if default_preset then
+        return pull["sync-preset"](default_preset)
+      else
+        notify.error("No query or preset specified")
+        return {error = "No query or preset specified", ok = false}
+      end
+    else
+      if string.find(query_or_preset, ":") then
+        return pull["sync-stories"](query_or_preset)
+      else
+        local preset = config["get-preset"](query_or_preset)
+        if preset then
+          return pull["sync-preset"](query_or_preset)
+        else
+          return pull["sync-stories"](query_or_preset)
+        end
+      end
+    end
+  end
+end
+M["sync-all"] = function()
+  if not config["is-configured"]() then
+    return notify["no-token"]()
+  else
+    return pull["sync-all-presets"]()
+  end
+end
+M["cache-refresh"] = function(cache_type)
+  if not config["is-configured"]() then
+    return notify["no-token"]()
+  else
+    if cache_type then
+      local api_module
+      if (cache_type == "members") then
+        api_module = require("longway.api.members")
+      elseif (cache_type == "workflows") then
+        api_module = require("longway.api.workflows")
+      elseif (cache_type == "iterations") then
+        api_module = require("longway.api.iterations")
+      elseif (cache_type == "teams") then
+        api_module = require("longway.api.teams")
+      else
+        local _ = cache_type
+        api_module = nil
+      end
+      if api_module then
+        notify.info(string.format("Refreshing %s cache...", cache_type))
+        local result = api_module["refresh-cache"]()
+        if result.ok then
+          return notify.info(string.format("%s cache refreshed", cache_type))
+        else
+          return notify.error(string.format("Failed to refresh %s cache: %s", cache_type, (result.error or "unknown")))
+        end
+      else
+        return notify.error(string.format("Unknown cache type: %s", cache_type))
+      end
+    else
+      notify.info("Refreshing all caches...")
+      local members = require("longway.api.members")
+      local workflows = require("longway.api.workflows")
+      local iterations = require("longway.api.iterations")
+      local teams = require("longway.api.teams")
+      members["refresh-cache"]()
+      workflows["refresh-cache"]()
+      iterations["refresh-cache"]()
+      teams["refresh-cache"]()
+      return notify.info("All caches refreshed")
+    end
+  end
+end
+M["cache-status"] = function()
+  local status = cache["get-status"]()
+  print("Cache Status:")
+  print("-------------")
+  for cache_type, info in pairs(status) do
+    local state
+    if not info.exists then
+      state = "not cached"
+    elseif info.expired then
+      state = "expired"
+    else
+      state = "valid"
+    end
+    local age_str
+    if info.age then
+      age_str = string.format("%d seconds ago", info.age)
+    else
+      age_str = "never"
+    end
+    print(string.format("  %s: %s (%s)", cache_type, state, age_str))
+  end
+  return nil
+end
+M["list-presets"] = function()
+  local presets = config["get-presets"]()
+  local default = config["get-default-preset"]()
+  if (next(presets) == nil) then
+    return notify.info("No presets configured")
+  else
+    print("Configured Presets:")
+    print("-------------------")
+    for name, preset in pairs(presets) do
+      local is_default = (name == default)
+      local marker
+      if is_default then
+        marker = " (default)"
+      else
+        marker = ""
+      end
+      print(string.format("  %s%s", name, marker))
+      if preset.query then
+        print(string.format("    query: %s", preset.query))
+      else
+      end
+      if preset.description then
+        print(string.format("    desc: %s", preset.description))
+      else
+      end
+    end
+    return nil
+  end
+end
 return M

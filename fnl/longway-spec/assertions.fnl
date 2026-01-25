@@ -62,7 +62,9 @@
   (let [[content] args]
     (and content
          (string.match content "^%-%-%-\n")
-         (string.find content "\n%-%-%-\n" 4))))
+         ;; Match closing --- with optional trailing newline
+         (or (string.find content "\n%-%-%-\n" 4)
+             (string.match content "\n%-%-%-$")))))
 
 (say:set "assertion.has_frontmatter.positive"
          "Expected content to have valid YAML frontmatter")

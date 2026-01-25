@@ -1,96 +1,77 @@
--- Notification helpers for longway.nvim
--- Compiled from fnl/longway/ui/notify.fnl
-
+-- [nfnl] fnl/longway/ui/notify.fnl
 local config = require("longway.config")
-
 local M = {}
-
-M.levels = {
-  debug = vim.log.levels.DEBUG,
-  info = vim.log.levels.INFO,
-  warn = vim.log.levels.WARN,
-  error = vim.log.levels.ERROR,
-}
-
-function M.notify(msg, level)
+M.levels = {debug = vim.log.levels.DEBUG, info = vim.log.levels.INFO, warn = vim.log.levels.WARN, error = vim.log.levels.ERROR}
+M.notify = function(msg, level)
   local cfg = config.get()
-  level = level or vim.log.levels.INFO
+  local level0 = (level or vim.log.levels.INFO)
   if cfg.notify then
-    if level >= (cfg.notify_level or vim.log.levels.INFO) then
-      vim.notify("[longway] " .. msg, level)
+    if (level0 >= (cfg.notify_level or vim.log.levels.INFO)) then
+      return vim.notify(("[longway] " .. msg), level0)
+    else
+      return nil
     end
+  else
+    return nil
   end
 end
-
-function M.debug(msg)
+M.debug = function(msg)
   local cfg = config.get()
   if cfg.debug then
-    M.notify(msg, vim.log.levels.DEBUG)
-  end
-end
-
-function M.info(msg)
-  M.notify(msg, vim.log.levels.INFO)
-end
-
-function M.warn(msg)
-  M.notify(msg, vim.log.levels.WARN)
-end
-
-function M.error(msg)
-  M.notify(msg, vim.log.levels.ERROR)
-end
-
-function M.success(msg)
-  M.info(msg)
-end
-
-function M.sync_started(count)
-  if count == 1 then
-    M.info("Syncing 1 item...")
+    return M.notify(msg, vim.log.levels.DEBUG)
   else
-    M.info(string.format("Syncing %d items...", count))
+    return nil
   end
 end
-
-function M.sync_completed(count)
-  if count == 1 then
-    M.success("Synced 1 item")
+M.info = function(msg)
+  return M.notify(msg, vim.log.levels.INFO)
+end
+M.warn = function(msg)
+  return M.notify(msg, vim.log.levels.WARN)
+end
+M.error = function(msg)
+  return M.notify(msg, vim.log.levels.ERROR)
+end
+M.success = function(msg)
+  return M.info(msg)
+end
+M["sync-started"] = function(count)
+  if (count == 1) then
+    return M.info("Syncing 1 item...")
   else
-    M.success(string.format("Synced %d items", count))
+    return M.info(string.format("Syncing %d items...", count))
   end
 end
-
-function M.push_started()
-  M.info("Pushing changes to Shortcut...")
+M["sync-completed"] = function(count)
+  if (count == 1) then
+    return M.success("Synced 1 item")
+  else
+    return M.success(string.format("Synced %d items", count))
+  end
 end
-
-function M.push_completed()
-  M.success("Changes pushed to Shortcut")
+M["push-started"] = function()
+  return M.info("Pushing changes to Shortcut...")
 end
-
-function M.pull_started(id)
-  M.info(string.format("Pulling story %s from Shortcut...", tostring(id)))
+M["push-completed"] = function()
+  return M.success("Changes pushed to Shortcut")
 end
-
-function M.pull_completed(id, name)
-  M.success(string.format("Pulled: %s", name or tostring(id)))
+M["pull-started"] = function(id)
+  return M.info(string.format("Pulling story %s from Shortcut...", tostring(id)))
 end
-
-function M.conflict_detected(id)
-  M.warn(string.format("Conflict detected for story %s. Use :LongwayResolve to resolve.", tostring(id)))
+M["pull-completed"] = function(id, name)
+  return M.success(string.format("Pulled: %s", (name or tostring(id))))
 end
-
-function M.api_error(msg, status)
+M["conflict-detected"] = function(id)
+  return M.warn(string.format("Conflict detected for story %s. Use :LongwayResolve to resolve.", tostring(id)))
+end
+M["api-error"] = function(msg, status)
   if status then
-    M.error(string.format("API error (%d): %s", status, msg))
+    return M.error(string.format("API error (%d): %s", status, msg))
   else
-    M.error(string.format("API error: %s", msg))
+    return M.error(string.format("API error: %s", msg))
   end
 end
-
-function M.no_token()
-  M.error("No Shortcut API token configured. Set SHORTCUT_API_TOKEN or configure token in setup()")
+M["no-token"] = function()
+  return M.error("No Shortcut API token configured. Set SHORTCUT_API_TOKEN or configure token in setup()")
 end
-
 return M

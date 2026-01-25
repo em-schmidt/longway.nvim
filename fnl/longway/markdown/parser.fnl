@@ -20,8 +20,8 @@
         start-escaped (string.gsub start-marker "[%-%.%+%[%]%(%)%$%^%%%?%*]" "%%%1")
         end-escaped (string.gsub end-marker "[%-%.%+%[%]%(%)%$%^%%%?%*]" "%%%1")
         pattern (.. start-escaped "\n(.-)\n" end-escaped)
-        match (string.match content pattern)]
-    match))
+        result (string.match content pattern)]
+    result))
 
 (fn M.extract-description [content]
   "Extract the description from sync markers"
@@ -70,9 +70,9 @@
   ;;
   ;; Comment text here
   (let [header-pattern "%*%*(.-)%*%*%s*·%s*([%d%-]+%s*[%d:]+)%s*<!%-%-%s*comment:(%S+)%s*%-%->"
-        lines []
-        header-line nil]
+        lines []]
     (var found-header false)
+    (var header-line nil)
     (each [line (string.gmatch (.. block "\n") "([^\n]*)\n")]
       (if (not found-header)
           (let [(author timestamp id) (string.match line header-pattern)]
@@ -98,9 +98,9 @@
               ;; Split by --- separator
               blocks (vim.split comments-content "\n%-%-%-\n" {:plain false :trimempty true})]
           (each [_ block (ipairs blocks)]
-            (let [comment (parse-comment-block block)]
-              (when comment
-                (table.insert comments comment))))
+            (let [cmt (parse-comment-block block)]
+              (when cmt
+                (table.insert comments cmt))))
           comments))))
 
 (fn M.parse [content]

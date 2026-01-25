@@ -25,7 +25,7 @@ say:set("assertion.is_valid_hash.negative", "Expected '%s' NOT to be a valid has
 assert:register("assertion", "is_valid_hash", is_valid_hash, "assertion.is_valid_hash.positive", "assertion.is_valid_hash.negative")
 local function has_frontmatter(state, args)
   local content = args[1]
-  return (content and string.match(content, "^%-%-%-\n") and string.find(content, "\n%-%-%-\n", 4))
+  return (content and string.match(content, "^%-%-%-\n") and (string.find(content, "\n%-%-%-\n", 4) or string.match(content, "\n%-%-%-$")))
 end
 say:set("assertion.has_frontmatter.positive", "Expected content to have valid YAML frontmatter")
 say:set("assertion.has_frontmatter.negative", "Expected content NOT to have frontmatter")

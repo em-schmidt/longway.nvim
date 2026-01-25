@@ -1,32 +1,20 @@
--- Content hashing utilities for longway.nvim
--- Compiled from fnl/longway/util/hash.fnl
-
+-- [nfnl] fnl/longway/util/hash.fnl
 local M = {}
-
-function M.djb2(str)
+M.djb2 = function(str)
   local hash = 5381
   for i = 1, #str do
-    local c = str:byte(i)
-    hash = ((hash * 33) + c) % 0x7FFFFFFF
+    local c = string.byte(str, i)
+    hash = ((hash * 33) + c)
+    hash = (hash % 2147483647)
   end
   return string.format("%08x", hash)
 end
-
-function M.content_hash(content)
-  local normalized = content
-  -- Normalize line endings
-  normalized = normalized:gsub("\r\n", "\n")
-  -- Trim trailing whitespace from lines
-  normalized = normalized:gsub("[ \t]+\n", "\n")
-  -- Trim leading/trailing whitespace
-  normalized = normalized:gsub("^%s+", "")
-  normalized = normalized:gsub("%s+$", "")
+M["content-hash"] = function(content)
+  local normalized = string.gsub(string.gsub(string.gsub(string.gsub(content, "\r\n", "\n"), "[ \t]+\n", "\n"), "^%s+", ""), "%s+$", "")
   return M.djb2(normalized)
 end
-
-function M.has_changed(old_hash, new_content)
-  local new_hash = M.content_hash(new_content)
-  return old_hash ~= new_hash
+M["has-changed"] = function(old_hash, new_content)
+  local new_hash = M["content-hash"](new_content)
+  return (old_hash ~= new_hash)
 end
-
 return M

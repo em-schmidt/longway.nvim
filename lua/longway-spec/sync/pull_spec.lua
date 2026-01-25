@@ -1,3 +1,4 @@
+-- [nfnl] fnl/longway-spec/sync/pull_spec.fnl
 local t = require("longway-spec.init")
 local pull = require("longway.sync.pull")
 local function _1_()
@@ -7,25 +8,25 @@ local function _1_()
   before_each(_2_)
   local function _3_()
     local function _4_()
-      return assert.is_function(pull.pull_story)
+      return assert.is_function(pull["pull-story"])
     end
-    it("exports pull_story function", _4_)
+    it("exports pull-story function", _4_)
     local function _5_()
-      return assert.is_function(pull.pull_story_to_buffer)
+      return assert.is_function(pull["pull-story-to-buffer"])
     end
-    it("exports pull_story_to_buffer function", _5_)
+    it("exports pull-story-to-buffer function", _5_)
     local function _6_()
-      return assert.is_function(pull.refresh_current_buffer)
+      return assert.is_function(pull["refresh-current-buffer"])
     end
-    return it("exports refresh_current_buffer function", _6_)
+    return it("exports refresh-current-buffer function", _6_)
   end
   describe("module structure", _3_)
   local function _7_()
     local function _8_()
-      return assert.is_function(pull.pull_story)
+      return assert.is_function(pull["pull-story"])
     end
     return it("requires a story ID argument", _8_)
   end
-  return describe("pull_story", _7_)
+  return describe("pull-story", _7_)
 end
 return describe("longway.sync.pull", _1_)

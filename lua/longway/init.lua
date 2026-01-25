@@ -1,43 +1,48 @@
--- Main entry point for longway.nvim
--- Compiled from fnl/longway/init.fnl
-
+-- [nfnl] fnl/longway/init.fnl
 local config = require("longway.config")
 local core = require("longway.core")
-
 local M = {}
-
-function M.setup(opts)
+M.setup = function(opts)
   config.setup(opts)
-
-  -- Validate configuration
-  local ok, errors = config.validate()
-  if not ok and config.get().debug then
-    for _, err in ipairs(errors) do
-      vim.notify("[longway] " .. err, vim.log.levels.WARN)
+  do
+    local _let_1_ = config.validate()
+    local ok = _let_1_[1]
+    local errors = _let_1_[2]
+    if (not ok and config.get().debug) then
+      for _, err in ipairs(errors) do
+        vim.notify(("[longway] " .. err), vim.log.levels.WARN)
+      end
+    else
     end
   end
-
-  -- Log initialization in debug mode
   if config.get().debug then
     print("longway.nvim initialized")
-    print(string.format("  Workspace: %s", config.get_workspace_dir()))
-    print(string.format("  Token configured: %s", tostring(config.is_configured())))
+    print(string.format("  Workspace: %s", config["get-workspace-dir"]()))
+    return print(string.format("  Token configured: %s", tostring(config["is-configured"]())))
+  else
+    return nil
   end
 end
-
--- Expose core functions
 M.pull = core.pull
 M.push = core.push
 M.refresh = core.refresh
-M.open = core.open_in_browser
+M.open = core["open-in-browser"]
 M.status = core.status
-M.get_info = core.get_info
-
--- Expose config functions
-M.get_config = config.get
-M.is_configured = config.is_configured
-
--- Legacy function for compatibility
+M["get-info"] = core["get-info"]
+M["pull-epic"] = core["pull-epic"]
+M.sync = core.sync
+M["sync-all"] = core["sync-all"]
+M["cache-refresh"] = core["cache-refresh"]
+M["cache-status"] = core["cache-status"]
+M["list-presets"] = core["list-presets"]
+M.pull_epic = core["pull-epic"]
+M.sync_all = core["sync-all"]
+M.cache_refresh = core["cache-refresh"]
+M.cache_status = core["cache-status"]
+M.list_presets = core["list-presets"]
+M.get_info = core["get-info"]
+M["get-config"] = config.get
+M["is-configured"] = config["is-configured"]
+M["get-presets"] = config["get-presets"]
 M.hello = core.hello
-
 return M
