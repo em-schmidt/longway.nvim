@@ -5,8 +5,7 @@ local hash = require("longway.util.hash")
 local slug = require("longway.util.slug")
 local M = {}
 local function generate_story_filename(story)
-  local cfg = config.get()
-  return (slug.generate(story.name, story.id, cfg) .. ".md")
+  return slug["make-filename"](story.id, story.name, "story")
 end
 local function build_story_frontmatter(story)
   local fm = {shortcut_id = story.id, shortcut_type = "story", shortcut_url = story.app_url, story_type = story.story_type, state = story.workflow_state_name, created_at = story.created_at, updated_at = story.updated_at}

@@ -8,10 +8,13 @@ echo "Compiling Fennel files..."
 echo "This requires nfnl to be installed and will prompt to trust .nfnl.fnl"
 echo ""
 
-nvim --headless \
+if nvim --headless \
     -c "lua require('nfnl').setup()" \
-    -c "lua require('nfnl.api')['compile-all-files']()" \
-    -c "qa!"
-
-echo ""
-echo "Done! Remember to commit the compiled lua/ files."
+    -c "lua local results = require('nfnl.api')['compile-all-files'](); local errors = 0; for _, r in ipairs(results or {}) do if r.status == 'error' then print('ERROR: ' .. (r['source-path'] or 'unknown') .. ': ' .. (r.error or 'unknown error')); errors = errors + 1 end end; if errors > 0 then print(errors .. ' file(s) failed to compile'); vim.cmd('cquit 1') else vim.cmd('qa!') end"; then
+    echo ""
+    echo "Done! Remember to commit the compiled lua/ files."
+else
+    echo ""
+    echo "Compilation failed!"
+    exit 1
+fi

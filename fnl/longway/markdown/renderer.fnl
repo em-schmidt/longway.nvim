@@ -10,8 +10,7 @@
 
 (fn generate-story-filename [story]
   "Generate the filename for a story markdown file"
-  (let [cfg (config.get)]
-    (.. (slug.generate story.name story.id cfg) ".md")))
+  (slug.make-filename story.id story.name "story"))
 
 (fn build-story-frontmatter [story]
   "Build frontmatter data for a story"
