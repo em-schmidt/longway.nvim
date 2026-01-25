@@ -92,4 +92,74 @@
                   content "Test content"
                   stored-hash (content-hash content)
                   content-with-whitespace "  Test content  \n"]
-              (assert.is_false (has-changed stored-hash content-with-whitespace)))))))))
+              (assert.is_false (has-changed stored-hash content-with-whitespace)))))))
+
+    (describe "tasks-hash"
+      (fn []
+        (it "returns valid hash for tasks"
+          (fn []
+            (let [tasks-hash (. hash "tasks-hash")
+                  tasks [{:id 1 :description "Task 1" :complete false}
+                         {:id 2 :description "Task 2" :complete true}]
+                  result (tasks-hash tasks)]
+              (assert.is_valid_hash result))))
+
+        (it "returns consistent hash for same tasks"
+          (fn []
+            (let [tasks-hash (. hash "tasks-hash")
+                  tasks [{:id 1 :description "Task" :complete false}]
+                  hash1 (tasks-hash tasks)
+                  hash2 (tasks-hash tasks)]
+              (assert.equals hash1 hash2))))
+
+        (it "returns different hash for different tasks"
+          (fn []
+            (let [tasks-hash (. hash "tasks-hash")
+                  tasks1 [{:id 1 :description "Task" :complete false}]
+                  tasks2 [{:id 1 :description "Task" :complete true}]
+                  hash1 (tasks-hash tasks1)
+                  hash2 (tasks-hash tasks2)]
+              (assert.not_equals hash1 hash2))))
+
+        (it "handles empty task list"
+          (fn []
+            (let [tasks-hash (. hash "tasks-hash")
+                  result (tasks-hash [])]
+              (assert.is_valid_hash result))))
+
+        (it "handles nil task list"
+          (fn []
+            (let [tasks-hash (. hash "tasks-hash")
+                  result (tasks-hash nil)]
+              (assert.is_valid_hash result))))
+
+        (it "returns same hash regardless of task order"
+          (fn []
+            (let [tasks-hash (. hash "tasks-hash")
+                  tasks1 [{:id 1 :description "First" :complete false}
+                          {:id 2 :description "Second" :complete false}]
+                  tasks2 [{:id 2 :description "Second" :complete false}
+                          {:id 1 :description "First" :complete false}]
+                  hash1 (tasks-hash tasks1)
+                  hash2 (tasks-hash tasks2)]
+              ;; Should be same because tasks are sorted by ID before hashing
+              (assert.equals hash1 hash2))))))
+
+    (describe "tasks-changed?"
+      (fn []
+        (it "returns false when tasks match hash"
+          (fn []
+            (let [tasks-hash (. hash "tasks-hash")
+                  tasks-changed? (. hash "tasks-changed?")
+                  tasks [{:id 1 :description "Task" :complete false}]
+                  stored-hash (tasks-hash tasks)]
+              (assert.is_false (tasks-changed? stored-hash tasks)))))
+
+        (it "returns true when tasks differ from hash"
+          (fn []
+            (let [tasks-hash (. hash "tasks-hash")
+                  tasks-changed? (. hash "tasks-changed?")
+                  old-tasks [{:id 1 :description "Task" :complete false}]
+                  new-tasks [{:id 1 :description "Task" :complete true}]
+                  stored-hash (tasks-hash old-tasks)]
+              (assert.is_true (tasks-changed? stored-hash new-tasks)))))))))

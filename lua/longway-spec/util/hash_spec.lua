@@ -1,4 +1,3 @@
--- [nfnl] fnl/longway-spec/util/hash_spec.fnl
 require("longway-spec.assertions")
 local hash = require("longway.util.hash")
 local function _1_()
@@ -91,6 +90,74 @@ local function _1_()
     end
     return it("handles whitespace normalization in comparison", _16_)
   end
-  return describe("has-changed", _13_)
+  describe("has-changed", _13_)
+  local function _17_()
+    local function _18_()
+      local tasks_hash = hash["tasks-hash"]
+      local tasks = {{id = 1, description = "Task 1", complete = false}, {id = 2, description = "Task 2", complete = true}}
+      local result = tasks_hash(tasks)
+      return assert.is_valid_hash(result)
+    end
+    it("returns valid hash for tasks", _18_)
+    local function _19_()
+      local tasks_hash = hash["tasks-hash"]
+      local tasks = {{id = 1, description = "Task", complete = false}}
+      local hash1 = tasks_hash(tasks)
+      local hash2 = tasks_hash(tasks)
+      return assert.equals(hash1, hash2)
+    end
+    it("returns consistent hash for same tasks", _19_)
+    local function _20_()
+      local tasks_hash = hash["tasks-hash"]
+      local tasks1 = {{id = 1, description = "Task", complete = false}}
+      local tasks2 = {{id = 1, description = "Task", complete = true}}
+      local hash1 = tasks_hash(tasks1)
+      local hash2 = tasks_hash(tasks2)
+      return assert.not_equals(hash1, hash2)
+    end
+    it("returns different hash for different tasks", _20_)
+    local function _21_()
+      local tasks_hash = hash["tasks-hash"]
+      local result = tasks_hash({})
+      return assert.is_valid_hash(result)
+    end
+    it("handles empty task list", _21_)
+    local function _22_()
+      local tasks_hash = hash["tasks-hash"]
+      local result = tasks_hash(nil)
+      return assert.is_valid_hash(result)
+    end
+    it("handles nil task list", _22_)
+    local function _23_()
+      local tasks_hash = hash["tasks-hash"]
+      local tasks1 = {{id = 1, description = "First", complete = false}, {id = 2, description = "Second", complete = false}}
+      local tasks2 = {{id = 2, description = "Second", complete = false}, {id = 1, description = "First", complete = false}}
+      local hash1 = tasks_hash(tasks1)
+      local hash2 = tasks_hash(tasks2)
+      return assert.equals(hash1, hash2)
+    end
+    return it("returns same hash regardless of task order", _23_)
+  end
+  describe("tasks-hash", _17_)
+  local function _24_()
+    local function _25_()
+      local tasks_hash = hash["tasks-hash"]
+      local tasks_changed_3f = hash["tasks-changed?"]
+      local tasks = {{id = 1, description = "Task", complete = false}}
+      local stored_hash = tasks_hash(tasks)
+      return assert.is_false(tasks_changed_3f(stored_hash, tasks))
+    end
+    it("returns false when tasks match hash", _25_)
+    local function _26_()
+      local tasks_hash = hash["tasks-hash"]
+      local tasks_changed_3f = hash["tasks-changed?"]
+      local old_tasks = {{id = 1, description = "Task", complete = false}}
+      local new_tasks = {{id = 1, description = "Task", complete = true}}
+      local stored_hash = tasks_hash(old_tasks)
+      return assert.is_true(tasks_changed_3f(stored_hash, new_tasks))
+    end
+    return it("returns true when tasks differ from hash", _26_)
+  end
+  return describe("tasks-changed?", _24_)
 end
 return describe("longway.util.hash", _1_)
