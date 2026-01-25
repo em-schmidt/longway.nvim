@@ -10,7 +10,12 @@
       "Bash(gh pr list:*)",
       "Bash(gh pr view:*)",
       "Bash(gh pr diff:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(for f in fnl/longway/**/*.fnl fnl/longway-spec/**/*.fnl)",
+      "Bash(do)",
+      "Bash(echo:*)",
+      "Bash(done)",
+      "Bash(./scripts/compile:*)"
     ]
   }
 }

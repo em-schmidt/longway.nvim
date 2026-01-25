@@ -1,0 +1,3 @@
+[tools]
+neovim = "latest"
+lua = "5.1"
