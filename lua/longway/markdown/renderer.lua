@@ -66,7 +66,12 @@ local function render_tasks(tasks)
   end
 end
 local function render_comment(cmt)
-  local author_name = ((cmt.author and cmt.author.profile and cmt.author.profile.name) or "Unknown")
+  local author_name
+  if (type(cmt.author) == "string") then
+    author_name = cmt.author
+  else
+    author_name = ((cmt.author and cmt.author.profile and cmt.author.profile.name) or "Unknown")
+  end
   local timestamp
   if cmt.created_at then
     timestamp = string.sub(cmt.created_at, 1, 16)
@@ -137,14 +142,14 @@ local function render_story_state_badge(story)
 end
 local function render_epic_stats(epic)
   local stats = (epic.stats or {})
-  local function _13_()
+  local function _14_()
     if (stats.num_stories and (stats.num_stories > 0)) then
       return math.floor((((stats.num_stories_done or 0) / stats.num_stories) * 100))
     else
       return 0
     end
   end
-  return string.format("**Progress:** %d/%d stories done (%d%%)", (stats.num_stories_done or 0), (stats.num_stories or 0), _13_())
+  return string.format("**Progress:** %d/%d stories done (%d%%)", (stats.num_stories_done or 0), (stats.num_stories or 0), _14_())
 end
 M["render-epic"] = function(epic, stories)
   local fm_data = build_epic_frontmatter(epic)

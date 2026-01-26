@@ -74,8 +74,10 @@
 
 (fn render-comment [cmt]
   "Render a single comment"
-  (let [author-name (or (and cmt.author cmt.author.profile cmt.author.profile.name)
-                        "Unknown")
+  (let [author-name (if (= (type cmt.author) "string")
+                        cmt.author
+                        (or (and cmt.author cmt.author.profile cmt.author.profile.name)
+                            "Unknown"))
         timestamp (if cmt.created_at
                       (string.sub cmt.created_at 1 16)  ;; YYYY-MM-DDTHH:MM
                       "")
