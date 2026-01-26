@@ -66,8 +66,7 @@
         tasks-hash-stored (or fm.tasks_hash "")]
     (print (string.format "Tasks: %d local (%d complete, %d new)"
                           local-count complete-count new-count))
-    (when (and (> (length tasks-hash-stored) 0)
-               (not= tasks-hash-stored ""))
+    (when (> (length tasks-hash-stored) 0)
       (let [hash-mod (require :longway.util.hash)
             current-hash (hash-mod.tasks-hash local-tasks)
             changed (not= tasks-hash-stored current-hash)]

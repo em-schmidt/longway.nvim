@@ -76,7 +76,7 @@ local function print_task_status(parsed, fm)
   end
   local tasks_hash_stored = (fm.tasks_hash or "")
   print(string.format("Tasks: %d local (%d complete, %d new)", local_count, complete_count, new_count))
-  if ((#tasks_hash_stored > 0) and (tasks_hash_stored ~= "")) then
+  if (#tasks_hash_stored > 0) then
     local hash_mod = require("longway.util.hash")
     local current_hash = hash_mod["tasks-hash"](local_tasks)
     local changed = (tasks_hash_stored ~= current_hash)
