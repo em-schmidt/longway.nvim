@@ -1,8 +1,8 @@
--- [nfnl] fnl/longway/markdown/renderer.fnl
 local config = require("longway.config")
 local frontmatter = require("longway.markdown.frontmatter")
 local hash = require("longway.util.hash")
 local slug = require("longway.util.slug")
+local tasks_md = require("longway.markdown.tasks")
 local M = {}
 local function generate_story_filename(story)
   return slug["make-filename"](story.id, story.name, "story")
@@ -40,6 +40,7 @@ local function build_story_frontmatter(story)
   else
   end
   fm.sync_hash = ""
+  fm.tasks_hash = ""
   fm.local_updated_at = os.date("!%Y-%m-%dT%H:%M:%SZ")
   return fm
 end
@@ -53,40 +54,32 @@ local function render_description(description)
   local desc = (description or "")
   return render_sync_section("description", desc)
 end
-local function render_task(task, cfg)
-  local checkbox
-  if task.complete then
-    checkbox = "[x]"
-  else
-    checkbox = "[ ]"
-  end
-  local owner_mention
-  if (cfg.tasks.show_owners and task.owner_ids and (#task.owner_ids > 0)) then
-    owner_mention = (" @" .. task.owner_ids[1])
-  else
-    owner_mention = ""
-  end
-  local metadata
-  local function _9_()
-    if task.complete then
-      return "true"
+local function format_tasks_for_render(tasks)
+  local formatted = {}
+  for i, task in ipairs((tasks or {})) do
+    local owner_mention
+    if (task.owner_ids and (#task.owner_ids > 0)) then
+      owner_mention = tasks_md["resolve-owner-id"](task.owner_ids[1])
     else
-      return "false"
+      owner_mention = nil
     end
+    local _8_
+    if owner_mention then
+      _8_ = string.gsub(owner_mention, " ", "_")
+    else
+      _8_ = nil
+    end
+    table.insert(formatted, {id = task.id, description = task.description, complete = task.complete, owner_ids = (task.owner_ids or {}), owner_mention = _8_, position = (task.position or i), is_new = false})
   end
-  metadata = string.format("<!-- task:%s%s complete:%s -->", tostring(task.id), owner_mention, _9_())
-  return string.format("- %s %s %s", checkbox, task.description, metadata)
+  return formatted
 end
 local function render_tasks(tasks)
-  local cfg = config.get()
   if (not tasks or (#tasks == 0)) then
     return render_sync_section("tasks", "")
   else
-    local lines = {}
-    for _, task in ipairs(tasks) do
-      table.insert(lines, render_task(task, cfg))
-    end
-    return render_sync_section("tasks", table.concat(lines, "\n"))
+    local formatted = format_tasks_for_render(tasks)
+    local content = tasks_md["render-tasks"](formatted)
+    return render_sync_section("tasks", content)
   end
 end
 local function render_comment(cmt)
@@ -137,7 +130,8 @@ M["render-story"] = function(story)
   table.insert(sections, render_local_notes())
   local body = table.concat(sections, "\n")
   local full_content = (frontmatter.generate(fm_data) .. "\n\n" .. body)
-  fm_data.sync_hash = hash["content-hash"](story.description)
+  fm_data.sync_hash = hash["content-hash"]((story.description or ""))
+  fm_data.tasks_hash = hash["tasks-hash"]((story.tasks or {}))
   return (frontmatter.generate(fm_data) .. "\n\n" .. body)
 end
 local function build_epic_frontmatter(epic)

@@ -5,8 +5,141 @@
 (local stories-api (require :longway.api.stories))
 (local parser (require :longway.markdown.parser))
 (local notify (require :longway.ui.notify))
+(local tasks-sync (require :longway.sync.tasks))
+(local tasks-md (require :longway.markdown.tasks))
+(local confirm (require :longway.ui.confirm))
+(local hash (require :longway.util.hash))
+(local frontmatter (require :longway.markdown.frontmatter))
 
 (local M {})
+
+(fn update-buffer-frontmatter [bufnr new-fm-data]
+  "Update frontmatter in a buffer with new data"
+  (let [lines (vim.api.nvim_buf_get_lines bufnr 0 -1 false)
+        content (table.concat lines "\n")
+        parsed-fm (frontmatter.parse content)]
+    ;; Merge new data into existing frontmatter
+    (each [k v (pairs new-fm-data)]
+      (tset parsed-fm.frontmatter k v))
+    ;; Generate new frontmatter string
+    (let [new-fm-str (frontmatter.generate parsed-fm.frontmatter)
+          ;; Find end of frontmatter (second ---)
+          new-content (.. new-fm-str "\n\n" parsed-fm.body)
+          new-lines (vim.split new-content "\n" {:plain true})]
+      (vim.api.nvim_buf_set_lines bufnr 0 -1 false new-lines))))
+
+(fn update-buffer-tasks [bufnr tasks]
+  "Update the tasks section in a buffer with new task data (including new IDs)"
+  (let [lines (vim.api.nvim_buf_get_lines bufnr 0 -1 false)
+        content (table.concat lines "\n")
+        cfg (config.get)
+        start-marker (string.gsub cfg.sync_start_marker "{section}" "tasks")
+        end-marker (string.gsub cfg.sync_end_marker "{section}" "tasks")
+        ;; Find the markers
+        start-escaped (string.gsub start-marker "[%-%.%+%[%]%(%)%$%^%%%?%*]" "%%%1")
+        end-escaped (string.gsub end-marker "[%-%.%+%[%]%(%)%$%^%%%?%*]" "%%%1")]
+    ;; Find start and end positions
+    (var start-line nil)
+    (var end-line nil)
+    (each [i line (ipairs lines)]
+      (when (string.match line start-escaped)
+        (set start-line i))
+      (when (and start-line (not end-line) (string.match line end-escaped))
+        (set end-line i)))
+
+    (when (and start-line end-line)
+      ;; Generate new task content
+      (let [new-task-content (tasks-md.render-tasks tasks)
+            new-section-lines [start-marker]
+            task-lines (vim.split new-task-content "\n" {:plain true})]
+        (each [_ line (ipairs task-lines)]
+          (table.insert new-section-lines line))
+        (table.insert new-section-lines end-marker)
+        ;; Replace lines from start to end
+        (vim.api.nvim_buf_set_lines bufnr (- start-line 1) end-line false new-section-lines)))))
+
+(fn push-story-description [story-id description]
+  "Push just the description to Shortcut
+   Returns: {:ok bool :error string}"
+  (let [update-data {:description description}
+        result (stories-api.update story-id update-data)]
+    (if result.ok
+        {:ok true :story result.data}
+        {:ok false :error result.error :status result.status})))
+
+(fn push-story-tasks [story-id local-tasks opts]
+  "Push task changes to Shortcut
+   Returns: {:ok bool :tasks [updated tasks] :error string}"
+  (let [cfg (config.get)]
+    ;; First, get current remote story to get remote tasks
+    (let [story-result (stories-api.get story-id)]
+      (if (not story-result.ok)
+          {:ok false :error story-result.error}
+          ;; Push tasks
+          (let [remote-tasks (or story-result.data.tasks [])
+                diff (tasks-sync.diff local-tasks remote-tasks)]
+            ;; Check if we need to confirm deletions
+            (if (and (> (length diff.deleted) 0)
+                     cfg.tasks.confirm_delete
+                     (not opts.skip_confirm))
+                ;; Need to handle async confirmation
+                ;; For now, we'll do sync push without async confirm
+                ;; A real implementation would use callbacks
+                (tasks-sync.push story-id local-tasks remote-tasks
+                                 {:skip_delete false})
+                ;; No confirmation needed or already confirmed
+                (tasks-sync.push story-id local-tasks remote-tasks
+                                 {:skip_delete (or opts.skip_delete false)})))))))
+
+(fn M.push-story [story-id parsed opts]
+  "Push story changes to Shortcut
+   story-id: The Shortcut story ID
+   parsed: Parsed markdown content
+   opts: {:sync_tasks bool :skip_confirm bool :bufnr number}
+   Returns: {:ok bool :error string}"
+  (let [opts (or opts {})
+        cfg (config.get)
+        bufnr (or opts.bufnr (vim.api.nvim_get_current_buf))
+        errors []
+        results {}]
+
+    (notify.push-started)
+
+    ;; Push description
+    (let [description (or parsed.description "")
+          desc-result (push-story-description story-id description)]
+      (set results.description desc-result)
+      (when (not desc-result.ok)
+        (table.insert errors (string.format "Description: %s" (or desc-result.error "unknown")))))
+
+    ;; Push tasks if enabled
+    (when (and cfg.sync_sections.tasks
+               (or opts.sync_tasks (not= opts.sync_tasks false)))
+      (let [local-tasks (or parsed.tasks [])]
+        (when (> (length local-tasks) 0)
+          (let [tasks-result (push-story-tasks story-id local-tasks opts)]
+            (set results.tasks tasks-result)
+            (if tasks-result.ok
+                ;; Update buffer with new task IDs if any were created
+                (when (and tasks-result.tasks (> (length tasks-result.tasks) 0))
+                  (update-buffer-tasks bufnr tasks-result.tasks)
+                  ;; Update tasks_hash in frontmatter
+                  (let [new-hash (hash.tasks-hash tasks-result.tasks)]
+                    (update-buffer-frontmatter bufnr {:tasks_hash new-hash})))
+                ;; Task push failed
+                (table.insert errors (string.format "Tasks: %s"
+                                                    (or tasks-result.error
+                                                        (table.concat (or tasks-result.errors []) ", ")))))))))
+
+    ;; Report results
+    (if (= (length errors) 0)
+        (do
+          (notify.push-completed)
+          {:ok true :results results})
+        (do
+          (notify.error (string.format "Push completed with errors: %s"
+                                       (table.concat errors "; ")))
+          {:ok false :errors errors :results results}))))
 
 (fn M.push-current-buffer []
   "Push changes from current buffer to Shortcut
@@ -29,26 +162,10 @@
                 {:ok false :error "Not a longway-managed file"})
               (if (not= story-type "story")
                   (do
-                    (notify.warn "Only story push is supported in Phase 1")
+                    (notify.warn "Only story push is supported currently")
                     {:ok false :error "Epic push not yet implemented"})
-                  ;; Push story description
-                  (M.push-story story-id parsed)))))))
-
-(fn M.push-story [story-id parsed]
-  "Push story changes to Shortcut"
-  (notify.push-started)
-
-  ;; For Phase 1, we only push description changes
-  (let [description (or parsed.description "")
-        update-data {:description description}
-        result (stories-api.update story-id update-data)]
-    (if result.ok
-        (do
-          (notify.push-completed)
-          {:ok true :story result.data})
-        (do
-          (notify.api-error result.error result.status)
-          {:ok false :error result.error}))))
+                  ;; Push story (description + tasks)
+                  (M.push-story story-id parsed {:bufnr bufnr})))))))
 
 (fn M.push-file [filepath]
   "Push changes from a specific file to Shortcut"
@@ -63,6 +180,6 @@
               story-id (. parsed.frontmatter :shortcut_id)]
           (if (not story-id)
               {:ok false :error "Not a longway-managed file"}
-              (M.push-story story-id parsed))))))
+              (M.push-story story-id parsed {}))))))
 
 M

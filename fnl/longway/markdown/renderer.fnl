@@ -5,6 +5,7 @@
 (local frontmatter (require :longway.markdown.frontmatter))
 (local hash (require :longway.util.hash))
 (local slug (require :longway.util.slug))
+(local tasks-md (require :longway.markdown.tasks))
 
 (local M {})
 
@@ -45,6 +46,7 @@
 
     ;; Sync hashes (computed after rendering)
     (set fm.sync_hash "")
+    (set fm.tasks_hash "")
     (set fm.local_updated_at (os.date "!%Y-%m-%dT%H:%M:%SZ"))
 
     fm))
@@ -61,29 +63,31 @@
   (let [desc (or description "")]
     (render-sync-section "description" desc)))
 
-(fn render-task [task cfg]
-  "Render a single task as markdown checkbox"
-  (let [checkbox (if task.complete "[x]" "[ ]")
-        owner-mention (if (and cfg.tasks.show_owners
-                               task.owner_ids
-                               (> (length task.owner_ids) 0))
-                          (.. " @" (. task.owner_ids 1))
-                          "")
-        metadata (string.format "<!-- task:%s%s complete:%s -->"
-                                (tostring task.id)
-                                owner-mention
-                                (if task.complete "true" "false"))]
-    (string.format "- %s %s %s" checkbox task.description metadata)))
+(fn format-tasks-for-render [tasks]
+  "Convert API task format to rendering format with owner resolution"
+  (let [formatted []]
+    (each [i task (ipairs (or tasks []))]
+      ;; Resolve owner IDs to mention names
+      (let [owner-mention (when (and task.owner_ids (> (length task.owner_ids) 0))
+                            (tasks-md.resolve-owner-id (. task.owner_ids 1)))]
+        (table.insert formatted
+                      {:id task.id
+                       :description task.description
+                       :complete task.complete
+                       :is_new false
+                       :owner_ids (or task.owner_ids [])
+                       :owner_mention (when owner-mention
+                                        (string.gsub owner-mention " " "_"))
+                       :position (or task.position i)})))
+    formatted))
 
 (fn render-tasks [tasks]
   "Render tasks section"
-  (let [cfg (config.get)]
-    (if (or (not tasks) (= (length tasks) 0))
-        (render-sync-section "tasks" "")
-        (let [lines []]
-          (each [_ task (ipairs tasks)]
-            (table.insert lines (render-task task cfg)))
-          (render-sync-section "tasks" (table.concat lines "\n"))))))
+  (if (or (not tasks) (= (length tasks) 0))
+      (render-sync-section "tasks" "")
+      (let [formatted (format-tasks-for-render tasks)
+            content (tasks-md.render-tasks formatted)]
+        (render-sync-section "tasks" content))))
 
 (fn render-comment [cmt]
   "Render a single comment"
@@ -148,8 +152,9 @@
     ;; Build full content
     (let [body (table.concat sections "\n")
           full-content (.. (frontmatter.generate fm-data) "\n\n" body)]
-      ;; Compute sync hash
-      (set fm-data.sync_hash (hash.content-hash story.description))
+      ;; Compute sync hashes
+      (set fm-data.sync_hash (hash.content-hash (or story.description "")))
+      (set fm-data.tasks_hash (hash.tasks-hash (or story.tasks [])))
       ;; Return with updated frontmatter
       (.. (frontmatter.generate fm-data) "\n\n" body))))
 
