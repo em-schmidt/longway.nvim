@@ -33,11 +33,30 @@ Thank you for your interest in contributing to longway.nvim! This guide will hel
 │   ├── init.fnl          # Main entry point
 │   ├── config.fnl        # Configuration
 │   ├── core.fnl          # Core functions
-│   ├── api/              # Shortcut API modules
-│   ├── sync/             # Sync operations
-│   ├── markdown/         # Markdown parsing/rendering
-│   ├── ui/               # UI helpers
-│   └── util/             # Utilities
+│   ├── api/
+│   │   ├── client.fnl    # HTTP client (wraps plenary.curl)
+│   │   ├── stories.fnl   # Stories API
+│   │   ├── tasks.fnl     # Tasks API (CRUD + batch)
+│   │   ├── epics.fnl     # Epics API
+│   │   ├── members.fnl   # Members API + cache
+│   │   └── ...           # workflows, iterations, teams, search
+│   ├── sync/
+│   │   ├── pull.fnl      # Fetch from API → markdown files
+│   │   ├── push.fnl      # Parse markdown → push to API
+│   │   └── tasks.fnl     # Task diff, push, pull, merge logic
+│   ├── markdown/
+│   │   ├── parser.fnl    # Parse markdown (frontmatter + sync sections)
+│   │   ├── renderer.fnl  # Convert API responses → markdown
+│   │   ├── tasks.fnl     # Task parsing, rendering, owner resolution
+│   │   └── frontmatter.fnl # YAML frontmatter handling
+│   ├── ui/
+│   │   ├── notify.fnl    # User notifications
+│   │   └── confirm.fnl   # Confirmation prompts
+│   ├── util/
+│   │   ├── hash.fnl      # Content + task hashing
+│   │   └── slug.fnl      # Title → filename slug
+│   └── cache/
+│       └── store.fnl     # In-memory cache
 ├── fnl/longway-spec/      # Test specifications (Fennel)
 ├── lua/longway/           # Compiled Lua (committed)
 ├── lua/longway-spec/      # Compiled tests (committed)
@@ -203,6 +222,32 @@ Tests run automatically on every pull request via GitHub Actions:
 - **Neovim versions**: v0.10.4, stable, nightly
 
 All checks must pass before merging.
+
+## Architecture Notes
+
+### Module Patterns
+
+- **Exports:** Each module defines `(local M {})` and returns `M` at the end
+- **Error handling:** Functions return `{:ok bool :data value :error string}` tuples
+- **Config access:** Use `(config.get)` for the current configuration table
+- **Naming:** kebab-case for Fennel identifiers (e.g., `push-story`, `task-changed?`)
+
+### Task Sync Flow
+
+The task sync system works through several cooperating modules:
+
+1. **Parsing:** `markdown/tasks.fnl` parses `- [x] ... <!-- task:ID -->` lines
+2. **Diffing:** `sync/tasks.fnl` compares local vs remote to find created/updated/deleted
+3. **Pushing:** `sync/push.fnl` orchestrates the push, including confirmation prompts
+4. **Rendering:** `markdown/tasks.fnl` is the single source of truth for formatting API tasks
+5. **Hashing:** `util/hash.fnl` computes `tasks_hash` for change detection
+
+### Single Source of Truth
+
+- `markdown/tasks.fnl` owns all task parsing (`parse-line`, `parse-section`) and formatting (`format-api-tasks`, `render-task`)
+- `markdown/parser.fnl` delegates to `tasks-md.parse-section` for task extraction
+- `markdown/renderer.fnl` delegates to `tasks-md.format-api-tasks` + `tasks-md.render-tasks` for rendering
+- `sync/tasks.fnl` delegates to `tasks-md.format-api-tasks` for pull formatting
 
 ## Documentation
 
