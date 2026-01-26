@@ -532,7 +532,7 @@ init.fnl
 
 Phases 1–4 are complete. Next:
 
-1. **Phase 5: Bidirectional Sync & Conflicts** — Change detection, auto-push on save, conflict resolution
+1. **Phase 5: Bidirectional Sync & Conflicts** — Change detection, auto-push on save, conflict resolution → See [PHASE_5_PLAN.md](./PHASE_5_PLAN.md)
 2. **Phase 6: UI Polish** — Snacks picker integration, progress indicators, statusline
 3. **Phase 7: Advanced Features** — Vimdiff conflict resolution, batch operations, offline queue, documentation
 
