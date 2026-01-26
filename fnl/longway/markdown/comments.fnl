@@ -6,6 +6,11 @@
 
 (local M {})
 
+(fn safe-text [val]
+  "Return val if it is a string, otherwise empty string.
+   Handles vim.NIL (userdata) returned by JSON null decoding."
+  (if (= (type val) :string) val ""))
+
 ;;; ============================================================================
 ;;; Comment Parsing
 ;;; ============================================================================
@@ -94,7 +99,7 @@
    Parses ISO 8601 timestamps and formats via os.date with the configured format string.
    Returns: formatted timestamp string"
   (let [cfg (config.get)]
-    (if (not created-at)
+    (if (or (not created-at) (not= (type created-at) :string))
         ""
         ;; Parse ISO 8601: YYYY-MM-DDTHH:MM:SS
         (let [(year month day hour min sec)
@@ -123,7 +128,7 @@
     (table.concat ["---"
                    (string.format "**%s** · %s %s" author-name timestamp metadata)
                    ""
-                   (or cmt.text "")]
+                   (safe-text cmt.text)]
                   "\n")))
 
 (fn M.render-comments [comments]
@@ -161,7 +166,7 @@
                       {:id cmt.id
                        :author author-name
                        :timestamp timestamp
-                       :text (or cmt.text "")
+                       :text (safe-text cmt.text)
                        :is_new false})))
     formatted))
 
