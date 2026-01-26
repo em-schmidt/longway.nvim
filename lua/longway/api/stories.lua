@@ -25,15 +25,6 @@ end
 M["list-for-epic"] = function(epic_id)
   return client.get(string.format("/epics/%s/stories", tostring(epic_id)))
 end
-M["create-task"] = function(story_id, task_data)
-  return client.post(string.format("/stories/%s/tasks", tostring(story_id)), {body = task_data})
-end
-M["update-task"] = function(story_id, task_id, task_data)
-  return client.put(string.format("/stories/%s/tasks/%s", tostring(story_id), tostring(task_id)), {body = task_data})
-end
-M["delete-task"] = function(story_id, task_id)
-  return client.delete(string.format("/stories/%s/tasks/%s", tostring(story_id), tostring(task_id)))
-end
 M["list-comments"] = function(story_id)
   return client.get(string.format("/stories/%s/comments", tostring(story_id)))
 end

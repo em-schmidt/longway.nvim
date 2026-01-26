@@ -1,3 +1,4 @@
+-- [nfnl] fnl/longway/markdown/renderer.fnl
 local config = require("longway.config")
 local frontmatter = require("longway.markdown.frontmatter")
 local hash = require("longway.util.hash")
@@ -54,30 +55,11 @@ local function render_description(description)
   local desc = (description or "")
   return render_sync_section("description", desc)
 end
-local function format_tasks_for_render(tasks)
-  local formatted = {}
-  for i, task in ipairs((tasks or {})) do
-    local owner_mention
-    if (task.owner_ids and (#task.owner_ids > 0)) then
-      owner_mention = tasks_md["resolve-owner-id"](task.owner_ids[1])
-    else
-      owner_mention = nil
-    end
-    local _8_
-    if owner_mention then
-      _8_ = string.gsub(owner_mention, " ", "_")
-    else
-      _8_ = nil
-    end
-    table.insert(formatted, {id = task.id, description = task.description, complete = task.complete, owner_ids = (task.owner_ids or {}), owner_mention = _8_, position = (task.position or i), is_new = false})
-  end
-  return formatted
-end
 local function render_tasks(tasks)
   if (not tasks or (#tasks == 0)) then
     return render_sync_section("tasks", "")
   else
-    local formatted = format_tasks_for_render(tasks)
+    local formatted = tasks_md["format-api-tasks"](tasks)
     local content = tasks_md["render-tasks"](formatted)
     return render_sync_section("tasks", content)
   end
@@ -153,14 +135,14 @@ local function render_story_state_badge(story)
 end
 local function render_epic_stats(epic)
   local stats = (epic.stats or {})
-  local function _16_()
+  local function _13_()
     if (stats.num_stories and (stats.num_stories > 0)) then
       return math.floor((((stats.num_stories_done or 0) / stats.num_stories) * 100))
     else
       return 0
     end
   end
-  return string.format("**Progress:** %d/%d stories done (%d%%)", (stats.num_stories_done or 0), (stats.num_stories or 0), _16_())
+  return string.format("**Progress:** %d/%d stories done (%d%%)", (stats.num_stories_done or 0), (stats.num_stories or 0), _13_())
 end
 M["render-epic"] = function(epic, stories)
   local fm_data = build_epic_frontmatter(epic)

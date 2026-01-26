@@ -205,23 +205,7 @@
   "Extract and format tasks from a story response
    story: Story data from API (includes .tasks array)
    Returns: {:ok bool :tasks [formatted tasks]}"
-  (let [raw-tasks (or story.tasks [])
-        formatted []]
-    (each [i task (ipairs raw-tasks)]
-      ;; Build formatted task with resolved owner names
-      (let [owner-mention (when (and task.owner_ids (> (length task.owner_ids) 0))
-                            (let [owner-name (tasks-md.resolve-owner-id (. task.owner_ids 1))]
-                              (when owner-name
-                                (string.gsub owner-name " " "_"))))]
-        (table.insert formatted
-                      {:id task.id
-                       :description task.description
-                       :complete task.complete
-                       :is_new false
-                       :owner_ids (or task.owner_ids [])
-                       :owner_mention owner-mention
-                       :position (or task.position i)})))
-    {:ok true :tasks formatted}))
+  {:ok true :tasks (tasks-md.format-api-tasks (or story.tasks []))})
 
 ;;; ============================================================================
 ;;; Merge Operations (for bidirectional sync with conflict detection)

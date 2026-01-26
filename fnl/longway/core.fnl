@@ -16,7 +16,7 @@
   "Get plugin information"
   (let [cfg (config.get)]
     {:name "longway.nvim"
-     :version "0.2.0"
+     :version "0.3.0"
      :author "Eric Schmidt"
      :configured (config.is-configured)
      :workspace_dir (config.get-workspace-dir)
@@ -55,6 +55,25 @@
           (notify.info (string.format "Opening %s" url)))
         (notify.error "No shortcut_url found in frontmatter"))))
 
+(fn print-task-status [parsed fm]
+  "Print task sync status info"
+  (let [local-tasks (or parsed.tasks [])
+        local-count (length local-tasks)
+        complete-count (accumulate [n 0 _ task (ipairs local-tasks)]
+                         (if task.complete (+ n 1) n))
+        new-count (accumulate [n 0 _ task (ipairs local-tasks)]
+                    (if task.is_new (+ n 1) n))
+        tasks-hash-stored (or fm.tasks_hash "")]
+    (print (string.format "Tasks: %d local (%d complete, %d new)"
+                          local-count complete-count new-count))
+    (when (> (length tasks-hash-stored) 0)
+      (let [hash-mod (require :longway.util.hash)
+            current-hash (hash-mod.tasks-hash local-tasks)
+            changed (not= tasks-hash-stored current-hash)]
+        (print (string.format "Tasks hash: %s%s"
+                              tasks-hash-stored
+                              (if changed " (changed)" " (synced)")))))))
+
 (fn M.status []
   "Show sync status of current file"
   (let [bufnr (vim.api.nvim_get_current_buf)
@@ -77,7 +96,8 @@
                 (when fm.updated_at
                   (print (string.format "Last updated: %s" fm.updated_at)))
                 (when fm.local_updated_at
-                  (print (string.format "Local updated: %s" fm.local_updated_at)))))))))
+                  (print (string.format "Local updated: %s" fm.local_updated_at)))
+                (print-task-status parsed fm)))))))
 
 ;; Phase 2: Sync and filtering functions
 

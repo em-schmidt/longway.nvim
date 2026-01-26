@@ -1,3 +1,4 @@
+-- [nfnl] fnl/longway-spec/util/hash_spec.fnl
 require("longway-spec.assertions")
 local hash = require("longway.util.hash")
 local function _1_()

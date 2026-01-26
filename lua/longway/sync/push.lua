@@ -1,3 +1,4 @@
+-- [nfnl] fnl/longway/sync/push.fnl
 local config = require("longway.config")
 local stories_api = require("longway.api.stories")
 local parser = require("longway.markdown.parser")
@@ -70,10 +71,31 @@ local function push_story_tasks(story_id, local_tasks, opts)
   else
     local remote_tasks = (story_result.data.tasks or {})
     local diff = tasks_sync.diff(local_tasks, remote_tasks)
-    if ((#diff.deleted > 0) and cfg.tasks.confirm_delete and not opts.skip_confirm) then
-      return tasks_sync.push(story_id, local_tasks, remote_tasks, {skip_delete = false})
+    local has_changes = tasks_sync["has-changes?"]
+    if not has_changes(diff) then
+      return {ok = true, tasks = local_tasks}
     else
-      return tasks_sync.push(story_id, local_tasks, remote_tasks, {skip_delete = (opts.skip_delete or false)})
+      if ((#diff.deleted > 0) and cfg.tasks.confirm_delete and not opts.skip_confirm) then
+        local delete_count = #diff.deleted
+        local msg
+        local function _5_()
+          if (delete_count == 1) then
+            return ""
+          else
+            return "s"
+          end
+        end
+        msg = string.format("Push will delete %d task%s from Shortcut. Continue?", delete_count, _5_())
+        local confirmed = confirm["confirm-sync"](msg)
+        if confirmed then
+          return tasks_sync.push(story_id, local_tasks, remote_tasks, {skip_delete = false})
+        else
+          notify.info("Skipping task deletions")
+          return tasks_sync.push(story_id, local_tasks, remote_tasks, {skip_delete = true})
+        end
+      else
+        return tasks_sync.push(story_id, local_tasks, remote_tasks, {skip_delete = (opts.skip_delete or false)})
+      end
     end
   end
 end
@@ -95,20 +117,18 @@ M["push-story"] = function(story_id, parsed, opts)
   end
   if (cfg.sync_sections.tasks and (opts0.sync_tasks or (opts0.sync_tasks ~= false))) then
     local local_tasks = (parsed.tasks or {})
-    if (#local_tasks > 0) then
-      local tasks_result = push_story_tasks(story_id, local_tasks, opts0)
-      results.tasks = tasks_result
-      if tasks_result.ok then
-        if (tasks_result.tasks and (#tasks_result.tasks > 0)) then
-          update_buffer_tasks(bufnr, tasks_result.tasks)
-          local new_hash = hash["tasks-hash"](tasks_result.tasks)
-          update_buffer_frontmatter(bufnr, {tasks_hash = new_hash})
-        else
-        end
+    local tasks_result = push_story_tasks(story_id, local_tasks, opts0)
+    results.tasks = tasks_result
+    if tasks_result.ok then
+      local result_tasks = (tasks_result.tasks or {})
+      if (#result_tasks > 0) then
+        update_buffer_tasks(bufnr, result_tasks)
       else
-        table.insert(errors, string.format("Tasks: %s", (tasks_result.error or table.concat((tasks_result.errors or {}), ", "))))
       end
+      local new_hash = hash["tasks-hash"](result_tasks)
+      update_buffer_frontmatter(bufnr, {tasks_hash = new_hash})
     else
+      table.insert(errors, string.format("Tasks: %s", (tasks_result.error or table.concat((tasks_result.errors or {}), ", "))))
     end
   else
   end

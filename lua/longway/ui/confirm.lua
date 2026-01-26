@@ -1,3 +1,4 @@
+-- [nfnl] fnl/longway/ui/confirm.fnl
 local M = {}
 M.confirm = function(message, callback)
   local function _1_(choice)
@@ -6,8 +7,13 @@ M.confirm = function(message, callback)
   return vim.ui.select({"Yes", "No"}, {prompt = message}, _1_)
 end
 M["confirm-sync"] = function(message, callback)
-  local result = vim.fn.confirm(message, "Yes\nNo", 2)
-  return callback((result == 1))
+  local result = vim.fn.confirm(message, "&Yes\n&No", 2)
+  local confirmed = (result == 1)
+  if callback then
+    callback(confirmed)
+  else
+  end
+  return confirmed
 end
 local function format_task_list(tasks)
   local lines = {}
@@ -62,7 +68,7 @@ end
 M["prompt-delete-or-skip"] = function(tasks, callback)
   local count = #tasks
   local task_list = format_task_list(tasks)
-  local function _7_(choice)
+  local function _8_(choice)
     if (choice == "Delete from Shortcut") then
       return callback("delete")
     elseif (choice == "Keep in Shortcut (skip delete)") then
@@ -71,6 +77,6 @@ M["prompt-delete-or-skip"] = function(tasks, callback)
       return callback(nil)
     end
   end
-  return vim.ui.select({"Delete from Shortcut", "Keep in Shortcut (skip delete)", "Cancel"}, {prompt = string.format("%d task(s) removed locally:\n\n%s\n\nWhat should happen on Shortcut?", count, task_list)}, _7_)
+  return vim.ui.select({"Delete from Shortcut", "Keep in Shortcut (skip delete)", "Cancel"}, {prompt = string.format("%d task(s) removed locally:\n\n%s\n\nWhat should happen on Shortcut?", count, task_list)}, _8_)
 end
 return M

@@ -1,3 +1,4 @@
+-- [nfnl] fnl/longway/sync/tasks.fnl
 local tasks_api = require("longway.api.tasks")
 local tasks_md = require("longway.markdown.tasks")
 local config = require("longway.config")
@@ -155,23 +156,7 @@ M.push = function(story_id, local_tasks, remote_tasks, opts)
   return {ok = (#all_errors == 0), created = created_count, updated = updated_count, deleted = deleted_count, errors = all_errors, tasks = result_tasks}
 end
 M.pull = function(story)
-  local raw_tasks = (story.tasks or {})
-  local formatted = {}
-  for i, task in ipairs(raw_tasks) do
-    local owner_mention
-    if (task.owner_ids and (#task.owner_ids > 0)) then
-      local owner_name = tasks_md["resolve-owner-id"](task.owner_ids[1])
-      if owner_name then
-        owner_mention = string.gsub(owner_name, " ", "_")
-      else
-        owner_mention = nil
-      end
-    else
-      owner_mention = nil
-    end
-    table.insert(formatted, {id = task.id, description = task.description, complete = task.complete, owner_ids = (task.owner_ids or {}), owner_mention = owner_mention, position = (task.position or i), is_new = false})
-  end
-  return {ok = true, tasks = formatted}
+  return {ok = true, tasks = tasks_md["format-api-tasks"]((story.tasks or {}))}
 end
 M.merge = function(local_tasks, remote_tasks, previous_tasks)
   local prev_map = build_remote_task_map(previous_tasks)

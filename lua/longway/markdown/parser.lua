@@ -1,6 +1,7 @@
 -- [nfnl] fnl/longway/markdown/parser.fnl
 local config = require("longway.config")
 local frontmatter = require("longway.markdown.frontmatter")
+local tasks_md = require("longway.markdown.tasks")
 local M = {}
 local function get_sync_markers(section_name)
   local cfg = config.get()
@@ -21,42 +22,12 @@ end
 M["extract-description"] = function(content)
   return extract_sync_section(content, "description")
 end
-local function parse_task_line(line)
-  local checkbox_pattern = "^%s*%-%s*%[([x ])%]%s*(.+)$"
-  local checkbox, rest = string.match(line, checkbox_pattern)
-  if checkbox then
-    local complete = (checkbox == "x")
-    local metadata_pattern = "(.-)%s*<!%-%-%s*task:(%S+)%s*(.-)%s*complete:(%S+)%s*%-%->"
-    local description, id, extras, complete_str = string.match(rest, metadata_pattern)
-    if description then
-      local _2_
-      if (id == "new") then
-        _2_ = nil
-      else
-        _2_ = tonumber(id)
-      end
-      return {description = string.gsub(description, "%s+$", ""), id = _2_, complete = complete, is_new = (id == "new"), owner_mention = string.match(extras, "@(%S+)")}
-    else
-      return {description = string.gsub(rest, "%s+$", ""), id = nil, complete = complete, is_new = true, owner_mention = nil}
-    end
-  else
-    return nil
-  end
-end
 M["extract-tasks"] = function(content)
   local tasks_content = extract_sync_section(content, "tasks")
   if not tasks_content then
     return {}
   else
-    local tasks = {}
-    for line in string.gmatch(tasks_content, "[^\n]+") do
-      local task = parse_task_line(line)
-      if task then
-        table.insert(tasks, task)
-      else
-      end
-    end
-    return tasks
+    return tasks_md["parse-section"](tasks_content)
   end
 end
 local function parse_comment_block(block)
@@ -69,13 +40,13 @@ local function parse_comment_block(block)
       local author, timestamp, id = string.match(line, header_pattern)
       if author then
         found_header = true
-        local _8_
+        local _3_
         if (id == "new") then
-          _8_ = nil
+          _3_ = nil
         else
-          _8_ = tonumber(id)
+          _3_ = tonumber(id)
         end
-        header_line = {author = author, timestamp = timestamp, id = _8_, is_new = (id == "new")}
+        header_line = {author = author, timestamp = timestamp, id = _3_, is_new = (id == "new")}
       else
       end
     else

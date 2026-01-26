@@ -1,3 +1,4 @@
+-- [nfnl] fnl/longway/util/hash.fnl
 local M = {}
 M.djb2 = function(str)
   local hash = 5381
