@@ -120,12 +120,13 @@ M["push-story"] = function(story_id, parsed, opts)
     local tasks_result = push_story_tasks(story_id, local_tasks, opts0)
     results.tasks = tasks_result
     if tasks_result.ok then
-      if (tasks_result.tasks and (#tasks_result.tasks > 0)) then
-        update_buffer_tasks(bufnr, tasks_result.tasks)
-        local new_hash = hash["tasks-hash"](tasks_result.tasks)
-        update_buffer_frontmatter(bufnr, {tasks_hash = new_hash})
+      local result_tasks = (tasks_result.tasks or {})
+      if (#result_tasks > 0) then
+        update_buffer_tasks(bufnr, result_tasks)
       else
       end
+      local new_hash = hash["tasks-hash"](result_tasks)
+      update_buffer_frontmatter(bufnr, {tasks_hash = new_hash})
     else
       table.insert(errors, string.format("Tasks: %s", (tasks_result.error or table.concat((tasks_result.errors or {}), ", "))))
     end

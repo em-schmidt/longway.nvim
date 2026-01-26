@@ -133,12 +133,14 @@
             tasks-result (push-story-tasks story-id local-tasks opts)]
         (set results.tasks tasks-result)
         (if tasks-result.ok
-            ;; Update buffer with new task IDs if any were created
-            (when (and tasks-result.tasks (> (length tasks-result.tasks) 0))
-              (update-buffer-tasks bufnr tasks-result.tasks)
-              ;; Update tasks_hash in frontmatter
-              (let [new-hash (hash.tasks-hash tasks-result.tasks)]
-                (update-buffer-frontmatter bufnr {:tasks_hash new-hash})))
+            (do
+              ;; Update buffer task section if there are tasks to render
+              (let [result-tasks (or tasks-result.tasks [])]
+                (when (> (length result-tasks) 0)
+                  (update-buffer-tasks bufnr result-tasks))
+                ;; Always update tasks_hash so status stays accurate
+                (let [new-hash (hash.tasks-hash result-tasks)]
+                  (update-buffer-frontmatter bufnr {:tasks_hash new-hash}))))
             ;; Task push failed
             (table.insert errors (string.format "Tasks: %s"
                                                 (or tasks-result.error
