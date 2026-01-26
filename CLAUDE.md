@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 longway.nvim is a Fennel-based Neovim plugin for bidirectional synchronization between [Shortcut](https://shortcut.com) and local markdown files. Users can pull stories/epics from Shortcut, edit them as markdown in Neovim, and push changes back.
 
-**Current Status:** Phase 1 complete (v0.1.0) - Core foundation with story pull/push
+**Current Status:** Phase 4 complete (v0.4.0) - Comment synchronization with author resolution, timestamp formatting, and edit warnings
 
 ## Build Commands
 
@@ -40,22 +40,38 @@ fnl/longway/           # Fennel source (edit these)
 ├── core.fnl           # Business logic (pull, push, refresh, open, status)
 ├── api/
 │   ├── client.fnl     # HTTP client (wraps plenary.curl)
-│   └── stories.fnl    # Shortcut Stories API operations
+│   ├── stories.fnl    # Shortcut Stories API operations
+│   ├── tasks.fnl      # Tasks API (CRUD + batch)
+│   ├── comments.fnl   # Comments API (CRUD + batch)
+│   ├── epics.fnl      # Epics API
+│   ├── members.fnl    # Members API + name cache
+│   ├── workflows.fnl  # Workflows API
+│   ├── iterations.fnl # Iterations API
+│   ├── teams.fnl      # Teams API
+│   └── search.fnl     # Search API
 ├── sync/
-│   ├── pull.fnl       # Fetch stories from API → markdown files
-│   └── push.fnl       # Parse markdown → push changes to API
+│   ├── pull.fnl       # Fetch from API → markdown files
+│   ├── push.fnl       # Parse markdown → push to API
+│   ├── tasks.fnl      # Task diff, push, pull, merge logic
+│   └── comments.fnl   # Comment diff, push, pull logic
 ├── markdown/
 │   ├── parser.fnl     # Parse markdown (frontmatter + sync sections)
-│   ├── renderer.fnl   # Convert API responses to markdown
-│   └── frontmatter.fnl# YAML frontmatter handling
+│   ├── renderer.fnl   # Convert API responses → markdown
+│   ├── frontmatter.fnl# YAML frontmatter handling
+│   ├── tasks.fnl      # Task parsing, rendering, owner resolution
+│   └── comments.fnl   # Comment parsing, rendering, author resolution
 ├── ui/
-│   └── notify.fnl     # User notifications
+│   ├── notify.fnl     # User notifications
+│   └── confirm.fnl    # Confirmation prompts (task/comment deletion)
+├── cache/
+│   └── store.fnl      # In-memory cache
 └── util/
     ├── slug.fnl       # Title → filename slug
-    └── hash.fnl       # Content hashing for change detection
+    └── hash.fnl       # Content + task + comment hashing
 
 fnl/longway-spec/      # Test specifications (mirrors source structure)
 lua/longway/           # Compiled Lua (committed for distribution)
+lua/longway-spec/      # Compiled tests (committed)
 plugin/longway.lua     # User command definitions
 ```
 
@@ -71,7 +87,7 @@ plugin/longway.lua     # User command definitions
 
 ## Dependencies
 
-- **Runtime:** Neovim >= 0.9.0, plenary.nvim
+- **Runtime:** Neovim >= 0.10.0, plenary.nvim
 - **Development:** nfnl (Fennel compiler), plenary.busted (tests)
 
 ## Development Workflow
@@ -81,9 +97,27 @@ plugin/longway.lua     # User command definitions
 3. Test: `make test`
 4. Commit both `.fnl` source and compiled `.lua` files
 
+## Key Patterns
+
+### Single Source of Truth
+
+Each entity type has one module owning all parsing and rendering:
+- `markdown/tasks.fnl` owns task parsing (`parse-line`, `parse-section`) and rendering (`format-api-tasks`, `render-task`)
+- `markdown/comments.fnl` owns comment parsing (`parse-block`, `parse-section`) and rendering (`format-api-comments`, `render-comment`)
+- `markdown/parser.fnl` and `markdown/renderer.fnl` delegate to these modules
+- `sync/tasks.fnl` and `sync/comments.fnl` delegate to their respective markdown modules for formatting
+
+### Comment Sync Notes
+
+- Shortcut API does not support editing comments — edits trigger a warning, not an API call
+- Authors are pre-resolved from UUID to display name via `members.resolve-name` before reaching the renderer
+- Comments use `comments_hash` in frontmatter for change detection (parallel to `tasks_hash`)
+- Timestamp formatting uses `os.date` with `config.comments.timestamp_format` (strftime format)
+
 ## Documentation
 
 - `docs/PRD.md` - Comprehensive product requirements and phase roadmap
 - `docs/TESTING_PRD.md` - Testing infrastructure plan
 - `docs/IMPLEMENTATION_PLAN.md` - Phase breakdown with tasks
+- `docs/PHASE_4_PLAN.md` - Phase 4 comment synchronization implementation plan
 - `CONTRIBUTING.md` - Development setup guide

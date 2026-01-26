@@ -37,23 +37,29 @@ Thank you for your interest in contributing to longway.nvim! This guide will hel
 │   │   ├── client.fnl    # HTTP client (wraps plenary.curl)
 │   │   ├── stories.fnl   # Stories API
 │   │   ├── tasks.fnl     # Tasks API (CRUD + batch)
+│   │   ├── comments.fnl  # Comments API (CRUD + batch)
 │   │   ├── epics.fnl     # Epics API
-│   │   ├── members.fnl   # Members API + cache
-│   │   └── ...           # workflows, iterations, teams, search
+│   │   ├── members.fnl   # Members API + name cache
+│   │   ├── workflows.fnl # Workflows API
+│   │   ├── iterations.fnl# Iterations API
+│   │   ├── teams.fnl     # Teams API
+│   │   └── search.fnl    # Search API
 │   ├── sync/
 │   │   ├── pull.fnl      # Fetch from API → markdown files
 │   │   ├── push.fnl      # Parse markdown → push to API
-│   │   └── tasks.fnl     # Task diff, push, pull, merge logic
+│   │   ├── tasks.fnl     # Task diff, push, pull, merge logic
+│   │   └── comments.fnl  # Comment diff, push, pull logic
 │   ├── markdown/
 │   │   ├── parser.fnl    # Parse markdown (frontmatter + sync sections)
 │   │   ├── renderer.fnl  # Convert API responses → markdown
 │   │   ├── tasks.fnl     # Task parsing, rendering, owner resolution
+│   │   ├── comments.fnl  # Comment parsing, rendering, author resolution
 │   │   └── frontmatter.fnl # YAML frontmatter handling
 │   ├── ui/
 │   │   ├── notify.fnl    # User notifications
-│   │   └── confirm.fnl   # Confirmation prompts
+│   │   └── confirm.fnl   # Confirmation prompts (task/comment deletion)
 │   ├── util/
-│   │   ├── hash.fnl      # Content + task hashing
+│   │   ├── hash.fnl      # Content + task + comment hashing
 │   │   └── slug.fnl      # Title → filename slug
 │   └── cache/
 │       └── store.fnl     # In-memory cache
@@ -153,6 +159,8 @@ The `longway-spec.init` module provides helpers:
 (t.make-story {:id 12345 :name "Test"})
 (t.make-task {:description "Do something"})
 (t.make-comment {:text "A comment"})
+(t.make-parsed-comment {:author "John Doe" :text "A parsed comment"})
+(t.make-api-comment {:text "Raw API comment" :author_id "uuid-1"})
 
 ;; Get sample markdown
 (t.sample-markdown)
@@ -242,12 +250,27 @@ The task sync system works through several cooperating modules:
 4. **Rendering:** `markdown/tasks.fnl` is the single source of truth for formatting API tasks
 5. **Hashing:** `util/hash.fnl` computes `tasks_hash` for change detection
 
+### Comment Sync Flow
+
+The comment sync system follows the same pattern as tasks:
+
+1. **Parsing:** `markdown/comments.fnl` parses `**Author** · timestamp <!-- comment:ID -->` blocks
+2. **Diffing:** `sync/comments.fnl` compares local vs remote to find created, deleted, and edited
+3. **Pushing:** `sync/push.fnl` orchestrates the push, including confirmation prompts and edit warnings
+4. **Rendering:** `markdown/comments.fnl` is the single source of truth for formatting API comments
+5. **Hashing:** `util/hash.fnl` computes `comments_hash` for change detection
+6. **Author resolution:** `markdown/comments.fnl` resolves `author_id` UUIDs to display names via `api/members.fnl`
+
+**Key difference from tasks:** There is no "update" path. Editing an existing comment's text locally triggers a warning notification, not an API call (Shortcut doesn't support comment editing).
+
 ### Single Source of Truth
 
 - `markdown/tasks.fnl` owns all task parsing (`parse-line`, `parse-section`) and formatting (`format-api-tasks`, `render-task`)
-- `markdown/parser.fnl` delegates to `tasks-md.parse-section` for task extraction
-- `markdown/renderer.fnl` delegates to `tasks-md.format-api-tasks` + `tasks-md.render-tasks` for rendering
+- `markdown/comments.fnl` owns all comment parsing (`parse-block`, `parse-section`) and formatting (`format-api-comments`, `render-comment`)
+- `markdown/parser.fnl` delegates to `tasks-md.parse-section` and `comments-md.parse-section` for extraction
+- `markdown/renderer.fnl` delegates to `tasks-md` and `comments-md` for rendering
 - `sync/tasks.fnl` delegates to `tasks-md.format-api-tasks` for pull formatting
+- `sync/comments.fnl` delegates to `comments-md.format-api-comments` for pull formatting
 
 ## Documentation
 

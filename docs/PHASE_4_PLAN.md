@@ -401,10 +401,10 @@ Following the Phase 3 pattern, comments get their own dedicated modules (`api/co
 ## Phase 4 Deliverables (from PRD)
 
 - [x] Config defaults for comments (already done)
-- [ ] Comments rendered in dedicated sync section
-- [ ] New comments can be created from markdown (`<!-- comment:new -->`)
-- [ ] Author names resolved from member cache
-- [ ] Comment deletion with confirmation prompt
-- [ ] Warning when editing existing comments
-- [ ] `comments_hash` tracked in frontmatter for change detection
-- [ ] Timestamp formatting per config
+- [x] Comments rendered in dedicated sync section
+- [x] New comments can be created from markdown (`<!-- comment:new -->`)
+- [x] Author names resolved from member cache
+- [x] Comment deletion with confirmation prompt
+- [x] Warning when editing existing comments
+- [x] `comments_hash` tracked in frontmatter for change detection
+- [x] Timestamp formatting per config
