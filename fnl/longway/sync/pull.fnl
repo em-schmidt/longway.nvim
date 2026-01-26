@@ -3,8 +3,10 @@
 
 (local config (require :longway.config))
 (local stories-api (require :longway.api.stories))
+(local comments-api (require :longway.api.comments))
 (local epics-api (require :longway.api.epics))
 (local search-api (require :longway.api.search))
+(local comments-md (require :longway.markdown.comments))
 (local renderer (require :longway.markdown.renderer))
 (local slug (require :longway.util.slug))
 (local notify (require :longway.ui.notify))
@@ -25,6 +27,28 @@
       (file:close)
       true)))
 
+(fn fetch-story-comments [story]
+  "Fetch comments for a story and attach formatted comments
+   Mutates story to add .comments field
+   Returns: story (with .comments populated)"
+  (let [cfg (config.get)]
+    (when cfg.sync_sections.comments
+      (let [result (comments-api.list story.id)]
+        (when result.ok
+          (let [raw-comments (or result.data [])
+                ;; Respect max_pull limit
+                limited (if (and cfg.comments.max_pull
+                                (> (length raw-comments) cfg.comments.max_pull))
+                           (do
+                             (let [trimmed []]
+                               (for [i 1 cfg.comments.max_pull]
+                                 (table.insert trimmed (. raw-comments i)))
+                               trimmed))
+                           raw-comments)
+                formatted (comments-md.format-api-comments limited)]
+            (set story.comments formatted))))))
+  story)
+
 (fn M.pull-story [story-id]
   "Pull a single story from Shortcut and save as markdown
    Returns: {:ok bool :path string :error string}"
@@ -35,8 +59,8 @@
         (do
           (notify.api-error result.error result.status)
           {:ok false :error result.error})
-        ;; Got the story
-        (let [story result.data
+        ;; Got the story - also fetch comments
+        (let [story (fetch-story-comments result.data)
               stories-dir (config.get-stories-dir)
               filename (slug.make-filename story.id story.name "story")
               filepath (.. stories-dir "/" filename)
@@ -99,7 +123,7 @@
                         (do
                           (notify.api-error result.error result.status)
                           {:ok false :error result.error})
-                        (let [story result.data
+                        (let [story (fetch-story-comments result.data)
                               markdown (renderer.render-story story)
                               lines (vim.split markdown "\n" {:plain true})]
                           (vim.api.nvim_buf_set_lines bufnr 0 -1 false lines)

@@ -79,4 +79,51 @@ M["prompt-delete-or-skip"] = function(tasks, callback)
   end
   return vim.ui.select({"Delete from Shortcut", "Keep in Shortcut (skip delete)", "Cancel"}, {prompt = string.format("%d task(s) removed locally:\n\n%s\n\nWhat should happen on Shortcut?", count, task_list)}, _8_)
 end
+local function format_comment_list(comments)
+  local lines = {}
+  for i, cmt in ipairs(comments) do
+    if (i <= 5) then
+      local text = (cmt.text or "")
+      local preview
+      if (#text > 40) then
+        preview = (string.sub(text, 1, 37) .. "...")
+      else
+        if (#text == 0) then
+          preview = "(empty comment)"
+        else
+          preview = text
+        end
+      end
+      local author = (cmt.author or "Unknown")
+      table.insert(lines, string.format("  \226\128\162 %s: %s", author, preview))
+    else
+    end
+  end
+  if (#comments > 5) then
+    table.insert(lines, string.format("  ... and %d more", (#comments - 5)))
+  else
+  end
+  return table.concat(lines, "\n")
+end
+M["confirm-delete-comments"] = function(comments, callback)
+  local count = #comments
+  local comment_list = format_comment_list(comments)
+  local message = string.format("Delete %d comment(s)?\n\n%s\n\nThis cannot be undone.", count, comment_list)
+  return M.confirm(message, callback)
+end
+M["confirm-delete-comment-ids"] = function(comment_ids, remote_comments, callback)
+  local comments_to_delete = {}
+  for _, id in ipairs(comment_ids) do
+    local found = nil
+    for _0, cmt in ipairs((remote_comments or {})) do
+      if found then break end
+      if (cmt.id == id) then
+        found = cmt
+      else
+      end
+    end
+    table.insert(comments_to_delete, (found or {id = id, text = string.format("Comment #%s", id), author = "Unknown"}))
+  end
+  return M["confirm-delete-comments"](comments_to_delete, callback)
+end
 return M

@@ -56,4 +56,36 @@ M["tasks-changed?"] = function(old_hash, tasks)
   local new_hash = M["tasks-hash"](tasks)
   return (old_hash ~= new_hash)
 end
+M["comments-hash"] = function(comments)
+  if (not comments or (#comments == 0)) then
+    return M.djb2("")
+  else
+    local sorted = vim.deepcopy(comments)
+    local function _7_(a, b)
+      if (a.id and b.id) then
+        return (a.id < b.id)
+      else
+        if a.id then
+          return false
+        else
+          if b.id then
+            return true
+          else
+            return ((a.text or "") < (b.text or ""))
+          end
+        end
+      end
+    end
+    table.sort(sorted, _7_)
+    local parts = {}
+    for _, cmt in ipairs(sorted) do
+      table.insert(parts, string.format("%s|%s", (cmt.id or "new"), (cmt.text or "")))
+    end
+    return M.djb2(table.concat(parts, "\n"))
+  end
+end
+M["comments-changed?"] = function(old_hash, comments)
+  local new_hash = M["comments-hash"](comments)
+  return (old_hash ~= new_hash)
+end
 return M

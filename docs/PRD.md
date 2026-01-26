@@ -785,33 +785,33 @@ Using nfnl for Fennel → Lua compilation:
 
 ## Implementation Phases
 
-### Phase 1: Core Foundation (v0.1.0)
-- [ ] API client with authentication
-- [ ] Basic story pull by ID
-- [ ] Markdown file creation with frontmatter
-- [ ] Manual push command for descriptions
-- [ ] Basic error handling
+### Phase 1: Core Foundation (v0.1.0) ✓
+- [x] API client with authentication
+- [x] Basic story pull by ID
+- [x] Markdown file creation with frontmatter
+- [x] Manual push command for descriptions
+- [x] Basic error handling
 
-### Phase 2: Filtering & Search (v0.2.0)
-- [ ] Search query parsing
-- [ ] Filter presets
-- [ ] Bulk story pull
-- [ ] Epic pull with story list
-- [ ] Cache for members/workflows
+### Phase 2: Filtering & Search (v0.2.0) ✓
+- [x] Search query parsing
+- [x] Filter presets
+- [x] Bulk story pull
+- [x] Epic pull with story list
+- [x] Cache for members/workflows
 
-### Phase 3: Task Synchronization (v0.3.0)
-- [ ] Task parsing from markdown checkboxes
-- [ ] Task rendering with metadata comments
-- [ ] Task creation (local → Shortcut)
-- [ ] Task completion sync (bidirectional)
-- [ ] Task deletion with confirmation
+### Phase 3: Task Synchronization (v0.3.0) ✓
+- [x] Task parsing from markdown checkboxes
+- [x] Task rendering with metadata comments
+- [x] Task creation (local → Shortcut)
+- [x] Task completion sync (bidirectional)
+- [x] Task deletion with confirmation
 
-### Phase 4: Comment Synchronization (v0.4.0)
-- [ ] Comment pull and rendering
-- [ ] Comment creation (local → Shortcut)
-- [ ] Member name resolution for display
-- [ ] Comment deletion with confirmation
-- [ ] Timestamp formatting and timezone handling
+### Phase 4: Comment Synchronization (v0.4.0) ✓
+- [x] Comment pull and rendering
+- [x] Comment creation (local → Shortcut)
+- [x] Member name resolution for display
+- [x] Comment deletion with confirmation
+- [x] Timestamp formatting and timezone handling
 
 ### Phase 5: Bidirectional Sync & Conflicts (v0.5.0)
 - [ ] Change detection (local/remote) for all sections

@@ -25,13 +25,14 @@ end
 M["list-for-epic"] = function(epic_id)
   return client.get(string.format("/epics/%s/stories", tostring(epic_id)))
 end
+local comments_api = require("longway.api.comments")
 M["list-comments"] = function(story_id)
-  return client.get(string.format("/stories/%s/comments", tostring(story_id)))
+  return comments_api.list(story_id)
 end
 M["create-comment"] = function(story_id, text)
-  return client.post(string.format("/stories/%s/comments", tostring(story_id)), {body = {text = text}})
+  return comments_api.create(story_id, {text = text})
 end
 M["delete-comment"] = function(story_id, comment_id)
-  return client.delete(string.format("/stories/%s/comments/%s", tostring(story_id), tostring(comment_id)))
+  return comments_api.delete(story_id, comment_id)
 end
 return M

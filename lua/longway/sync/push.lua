@@ -5,6 +5,8 @@ local parser = require("longway.markdown.parser")
 local notify = require("longway.ui.notify")
 local tasks_sync = require("longway.sync.tasks")
 local tasks_md = require("longway.markdown.tasks")
+local comments_sync = require("longway.sync.comments")
+local comments_md = require("longway.markdown.comments")
 local confirm = require("longway.ui.confirm")
 local hash = require("longway.util.hash")
 local frontmatter = require("longway.markdown.frontmatter")
@@ -54,6 +56,75 @@ local function update_buffer_tasks(bufnr, tasks)
     return nil
   end
 end
+local function update_buffer_comments(bufnr, comments)
+  local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+  local cfg = config.get()
+  local start_marker = string.gsub(cfg.sync_start_marker, "{section}", "comments")
+  local end_marker = string.gsub(cfg.sync_end_marker, "{section}", "comments")
+  local start_escaped = string.gsub(start_marker, "[%-%.%+%[%]%(%)%$%^%%%?%*]", "%%%1")
+  local end_escaped = string.gsub(end_marker, "[%-%.%+%[%]%(%)%$%^%%%?%*]", "%%%1")
+  local start_line = nil
+  local end_line = nil
+  for i, line in ipairs(lines) do
+    if string.match(line, start_escaped) then
+      start_line = i
+    else
+    end
+    if (start_line and not end_line and string.match(line, end_escaped)) then
+      end_line = i
+    else
+    end
+  end
+  if (start_line and end_line) then
+    local new_comment_content = comments_md["render-comments"](comments)
+    local new_section_lines = {start_marker}
+    local comment_lines = vim.split(new_comment_content, "\n", {plain = true})
+    for _, line in ipairs(comment_lines) do
+      table.insert(new_section_lines, line)
+    end
+    table.insert(new_section_lines, end_marker)
+    return vim.api.nvim_buf_set_lines(bufnr, (start_line - 1), end_line, false, new_section_lines)
+  else
+    return nil
+  end
+end
+local function push_story_comments(story_id, local_comments, opts)
+  local cfg = config.get()
+  local comments_api = require("longway.api.comments")
+  local remote_result = comments_api.list(story_id)
+  if not remote_result.ok then
+    return {error = remote_result.error, ok = false}
+  else
+    local remote_comments = comments_md["format-api-comments"]((remote_result.data or {}))
+    local diff = comments_sync.diff(local_comments, remote_comments)
+    local has_changes = comments_sync["has-changes?"]
+    if (not has_changes(diff) and (#diff.edited == 0)) then
+      return {ok = true, comments = local_comments}
+    else
+      if ((#diff.deleted > 0) and cfg.comments.confirm_delete and not opts.skip_confirm) then
+        local delete_count = #diff.deleted
+        local msg
+        local function _7_()
+          if (delete_count == 1) then
+            return ""
+          else
+            return "s"
+          end
+        end
+        msg = string.format("Push will delete %d comment%s from Shortcut. Continue?", delete_count, _7_())
+        local confirmed = confirm["confirm-sync"](msg)
+        if confirmed then
+          return comments_sync.push(story_id, local_comments, remote_comments, {skip_delete = false})
+        else
+          notify.info("Skipping comment deletions")
+          return comments_sync.push(story_id, local_comments, remote_comments, {skip_delete = true})
+        end
+      else
+        return comments_sync.push(story_id, local_comments, remote_comments, {skip_delete = (opts.skip_delete or false)})
+      end
+    end
+  end
+end
 local function push_story_description(story_id, description)
   local update_data = {description = description}
   local result = stories_api.update(story_id, update_data)
@@ -78,14 +149,14 @@ local function push_story_tasks(story_id, local_tasks, opts)
       if ((#diff.deleted > 0) and cfg.tasks.confirm_delete and not opts.skip_confirm) then
         local delete_count = #diff.deleted
         local msg
-        local function _5_()
+        local function _13_()
           if (delete_count == 1) then
             return ""
           else
             return "s"
           end
         end
-        msg = string.format("Push will delete %d task%s from Shortcut. Continue?", delete_count, _5_())
+        msg = string.format("Push will delete %d task%s from Shortcut. Continue?", delete_count, _13_())
         local confirmed = confirm["confirm-sync"](msg)
         if confirmed then
           return tasks_sync.push(story_id, local_tasks, remote_tasks, {skip_delete = false})
@@ -129,6 +200,23 @@ M["push-story"] = function(story_id, parsed, opts)
       update_buffer_frontmatter(bufnr, {tasks_hash = new_hash})
     else
       table.insert(errors, string.format("Tasks: %s", (tasks_result.error or table.concat((tasks_result.errors or {}), ", "))))
+    end
+  else
+  end
+  if (cfg.sync_sections.comments and (opts0.sync_comments or (opts0.sync_comments ~= false))) then
+    local local_comments = (parsed.comments or {})
+    local comments_result = push_story_comments(story_id, local_comments, opts0)
+    results.comments = comments_result
+    if comments_result.ok then
+      local result_comments = (comments_result.comments or {})
+      if (#result_comments > 0) then
+        update_buffer_comments(bufnr, result_comments)
+      else
+      end
+      local new_hash = hash["comments-hash"](result_comments)
+      update_buffer_frontmatter(bufnr, {comments_hash = new_hash})
+    else
+      table.insert(errors, string.format("Comments: %s", (comments_result.error or table.concat((comments_result.errors or {}), ", "))))
     end
   else
   end

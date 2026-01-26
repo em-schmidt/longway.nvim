@@ -59,4 +59,32 @@
   (let [new-hash (M.tasks-hash tasks)]
     (not= old-hash new-hash)))
 
+(fn M.comments-hash [comments]
+  "Generate a hash for a list of comments
+   Includes: id, text
+   Comments are sorted by ID for consistent ordering"
+  (if (or (not comments) (= (length comments) 0))
+      (M.djb2 "")
+      ;; Build a canonical string representation
+      (let [sorted (vim.deepcopy comments)]
+        (table.sort sorted (fn [a b]
+                             (if (and a.id b.id)
+                                 (< a.id b.id)
+                                 (if a.id false
+                                     (if b.id true
+                                         (< (or a.text "") (or b.text "")))))))
+        ;; Build canonical string: id|text for each comment
+        (let [parts []]
+          (each [_ cmt (ipairs sorted)]
+            (table.insert parts
+                          (string.format "%s|%s"
+                                         (or cmt.id "new")
+                                         (or cmt.text ""))))
+          (M.djb2 (table.concat parts "\n"))))))
+
+(fn M.comments-changed? [old-hash comments]
+  "Check if comments have changed compared to stored hash"
+  (let [new-hash (M.comments-hash comments)]
+    (not= old-hash new-hash)))
+
 M

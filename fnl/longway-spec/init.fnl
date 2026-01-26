@@ -20,6 +20,10 @@
                                           :tasks {:show_owners true
                                                           :confirm_delete true
                                                           :auto_assign_on_complete false}
+                                          :comments {:max_pull 50
+                                                     :show_timestamps true
+                                                     :timestamp_format "%Y-%m-%d %H:%M"
+                                                     :confirm_delete true}
                                           :_resolved_token "test-token"}
                                          (or overrides {}))]
     (config.setup test-config)
@@ -63,6 +67,27 @@
                         :created_at "2026-01-10T10:30:00Z"
                         :author {:id "author-1"
                                  :profile {:name "Test Author"}}}
+                       (or overrides {})))
+
+(fn M.make-api-comment [overrides]
+  "Create a mock API comment response (raw from Shortcut API)"
+  (vim.tbl_deep_extend :force
+                       {:id 11111
+                        :text "This is a test comment."
+                        :author_id "author-uuid-1"
+                        :created_at "2026-01-10T10:30:00Z"
+                        :updated_at "2026-01-10T10:30:00Z"
+                        :story_id 12345}
+                       (or overrides {})))
+
+(fn M.make-parsed-comment [overrides]
+  "Create a mock parsed comment (as returned by markdown parser)"
+  (vim.tbl_deep_extend :force
+                       {:id 11111
+                        :author "Test Author"
+                        :timestamp "2026-01-10 10:30"
+                        :text "This is a test comment."
+                        :is_new false}
                        (or overrides {})))
 
 (fn M.sample-markdown []

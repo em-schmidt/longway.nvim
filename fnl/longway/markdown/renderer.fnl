@@ -6,6 +6,7 @@
 (local hash (require :longway.util.hash))
 (local slug (require :longway.util.slug))
 (local tasks-md (require :longway.markdown.tasks))
+(local comments-md (require :longway.markdown.comments))
 
 (local M {})
 
@@ -47,6 +48,7 @@
     ;; Sync hashes (computed after rendering)
     (set fm.sync_hash "")
     (set fm.tasks_hash "")
+    (set fm.comments_hash "")
     (set fm.local_updated_at (os.date "!%Y-%m-%dT%H:%M:%SZ"))
 
     fm))
@@ -71,29 +73,13 @@
             content (tasks-md.render-tasks formatted)]
         (render-sync-section "tasks" content))))
 
-(fn render-comment [cmt]
-  "Render a single comment"
-  (let [author-name (or (and cmt.author cmt.author.profile cmt.author.profile.name)
-                        "Unknown")
-        timestamp (if cmt.created_at
-                      (string.sub cmt.created_at 1 16)  ;; YYYY-MM-DDTHH:MM
-                      "")
-        formatted-time (string.gsub timestamp "T" " ")
-        metadata (string.format "<!-- comment:%s -->" (tostring cmt.id))]
-    (table.concat ["---"
-                   (string.format "**%s** · %s %s" author-name formatted-time metadata)
-                   ""
-                   (or cmt.text "")]
-                  "\n")))
-
 (fn render-comments [comments]
-  "Render comments section"
+  "Render comments section
+   Delegates to comments-md for rendering, matching the tasks pattern."
   (if (or (not comments) (= (length comments) 0))
       (render-sync-section "comments" "")
-      (let [lines []]
-        (each [_ cmt (ipairs comments)]
-          (table.insert lines (render-comment cmt)))
-        (render-sync-section "comments" (table.concat lines "\n\n")))))
+      (let [content (comments-md.render-comments comments)]
+        (render-sync-section "comments" content))))
 
 (fn render-local-notes []
   "Render the local notes section template"
@@ -137,6 +123,7 @@
       ;; Compute sync hashes
       (set fm-data.sync_hash (hash.content-hash (or story.description "")))
       (set fm-data.tasks_hash (hash.tasks-hash (or story.tasks [])))
+      (set fm-data.comments_hash (hash.comments-hash (or story.comments [])))
       ;; Return with updated frontmatter
       (.. (frontmatter.generate fm-data) "\n\n" body))))
 

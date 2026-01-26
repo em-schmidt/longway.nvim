@@ -10,7 +10,7 @@ M.hello = function()
 end
 M["get-info"] = function()
   local cfg = config.get()
-  return {name = "longway.nvim", version = "0.3.0", author = "Eric Schmidt", configured = config["is-configured"](), workspace_dir = config["get-workspace-dir"](), presets = config["get-presets"](), debug = cfg.debug}
+  return {name = "longway.nvim", version = "0.4.0", author = "Eric Schmidt", configured = config["is-configured"](), workspace_dir = config["get-workspace-dir"](), presets = config["get-presets"](), debug = cfg.debug}
 end
 M.pull = function(story_id)
   if not config["is-configured"]() then
@@ -92,6 +92,39 @@ local function print_task_status(parsed, fm)
     return nil
   end
 end
+local function print_comment_status(parsed, fm)
+  local local_comments = (parsed.comments or {})
+  local local_count = #local_comments
+  local new_count
+  do
+    local n = 0
+    for _, cmt in ipairs(local_comments) do
+      if cmt.is_new then
+        n = (n + 1)
+      else
+        n = n
+      end
+    end
+    new_count = n
+  end
+  local comments_hash_stored = (fm.comments_hash or "")
+  print(string.format("Comments: %d local (%d new)", local_count, new_count))
+  if (#comments_hash_stored > 0) then
+    local hash_mod = require("longway.util.hash")
+    local current_hash = hash_mod["comments-hash"](local_comments)
+    local changed = (comments_hash_stored ~= current_hash)
+    local function _10_()
+      if changed then
+        return " (changed)"
+      else
+        return " (synced)"
+      end
+    end
+    return print(string.format("Comments hash: %s%s", comments_hash_stored, _10_()))
+  else
+    return nil
+  end
+end
 M.status = function()
   local bufnr = vim.api.nvim_get_current_buf()
   local filepath = vim.api.nvim_buf_get_name(bufnr)
@@ -121,7 +154,8 @@ M.status = function()
         print(string.format("Local updated: %s", fm.local_updated_at))
       else
       end
-      return print_task_status(parsed, fm)
+      print_task_status(parsed, fm)
+      return print_comment_status(parsed, fm)
     end
   end
 end
