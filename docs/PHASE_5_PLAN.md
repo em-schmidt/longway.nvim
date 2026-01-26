@@ -12,29 +12,59 @@ Phase 4 (Comment Synchronization) is complete. The codebase has partial scaffold
 
 | Component | Status | Location |
 |-----------|--------|----------|
-| Config keys for auto-push | Done | `config.fnl:42-44` (`auto_push_on_save`, `auto_push_delay`, `confirm_push`) |
-| Config key for conflict strategy | Done | `config.fnl:48` (`conflict_strategy "prompt"`) |
-| Config `get-state-dir` helper | Done | `config.fnl:176-178` (returns `.longway/state`) |
+| Config keys for auto-push | Done | `config.fnl` (`auto_push_on_save`, `auto_push_delay`, `confirm_push`) |
+| Config key for conflict strategy | Done | `config.fnl` (`conflict_strategy "prompt"`) |
 | Content hashing (description) | Done | `util/hash.fnl` (`content-hash`, `has-changed`) |
 | Task hashing | Done | `util/hash.fnl` (`tasks-hash`, `tasks-changed?`) |
 | Comment hashing | Done | `util/hash.fnl` (`comments-hash`, `comments-changed?`) |
 | Frontmatter hash fields | Done | `sync_hash`, `tasks_hash`, `comments_hash` in frontmatter |
-| Frontmatter timestamps | Done | `updated_at`, `local_updated_at` in frontmatter |
-| Cache store (JSON read/write) | Done | `cache/store.fnl` (reusable patterns for JSON file I/O) |
-| Sync state persistence | **Missing** | Needs `cache/state.fnl` |
+| Frontmatter timestamps | Done | `updated_at` (remote), `local_updated_at` in frontmatter |
 | Change detection / diff | **Missing** | Needs `sync/diff.fnl` |
 | Conflict resolution | **Missing** | Needs `sync/resolve.fnl` |
-| Auto-push autocmd | **Missing** | Needs wiring in `init.fnl` |
-| Pre-push remote check | **Missing** | `push.fnl` does not check remote `updated_at` before pushing descriptions |
+| Auto-push autocmd | **Missing** | Needs `sync/auto.fnl` |
+| Pre-push remote check | **Missing** | `push.fnl` does not check remote `updated_at` before pushing |
 | `:LongwayResolve` command | **Missing** | Needs command definition |
 | Enhanced `:LongwayStatus` | **Missing** | Status doesn't show sync state or conflicts |
-| Test specs | **Missing** | No `diff_spec`, `state_spec`, or `resolve_spec` files |
+| Test specs | **Missing** | No `diff_spec`, `resolve_spec`, or `auto_spec` files |
 
-**Estimated scope:** ~10 files to create/modify, ~8 test spec files.
+**Estimated scope:** ~8 files to create/modify, ~3 test spec files.
 
 ---
 
 ## Architecture Overview
+
+### Single Source of Truth: Frontmatter
+
+All sync state lives in the YAML frontmatter of each markdown file. **No separate state files.** The frontmatter already tracks:
+
+```yaml
+---
+shortcut_id: 12345
+shortcut_type: story
+updated_at: "2026-01-20T14:30:00Z"     # Remote timestamp at last pull/push
+local_updated_at: "2026-01-20T15:00:00Z" # When we last wrote the file
+sync_hash: abc12345                      # Description hash at last sync
+tasks_hash: def67890                     # Tasks hash at last sync
+comments_hash: ghi11111                  # Comments hash at last sync
+---
+```
+
+Phase 5 adds one new frontmatter field for conflict tracking:
+
+```yaml
+conflict_sections: ["description"]  # Sections with detected conflicts (nil when clean)
+```
+
+This keeps everything in one place — the markdown file itself is the complete record of sync state. No separate JSON files to keep in sync with the frontmatter.
+
+### Change Detection Logic
+
+**Local changes:** Compare current parsed content hashes against frontmatter hashes.
+- Description changed? → `hash.content-hash(parsed.description) != frontmatter.sync_hash`
+- Tasks changed? → `hash.tasks-hash(parsed.tasks) != frontmatter.tasks_hash`
+- Comments changed? → `hash.comments-hash(parsed.comments) != frontmatter.comments_hash`
+
+**Remote changes:** Fetch story from API, compare `story.updated_at` against `frontmatter.updated_at`.
 
 ### Data Flow
 
@@ -45,199 +75,110 @@ Phase 4 (Comment Synchronization) is complete. The codebase has partial scaffold
  Debounce (auto_push_delay ms)
        │
        ▼
- ┌─────────────────────┐
- │  Change Detection    │  sync/diff.fnl
- │  (local vs. stored)  │
- └────────┬────────────┘
+ ┌─────────────────────────────┐
+ │  Local Change Detection     │  sync/diff.fnl
+ │  (current hash vs. fm hash) │
+ └────────┬────────────────────┘
           │
     local changed?
      ╱          ╲
    No            Yes
    │              │
-  Skip     ┌─────▼─────────────┐
-           │  Remote Check      │  Fetch remote updated_at
-           │  (stored vs. API)  │
-           └─────┬─────────────┘
+  Skip     ┌─────▼──────────────────┐
+           │  Remote Check           │  Fetch remote updated_at
+           │  (API vs. fm.updated_at)│
+           └─────┬──────────────────┘
                  │
           remote changed?
            ╱          ╲
          No            Yes
           │              │
-    ┌─────▼─────┐  ┌────▼──────────┐
-    │  Push      │  │  CONFLICT     │
-    │  (normal)  │  │  Notify user  │
-    └────────────┘  │  Store state  │
-                    └───────────────┘
+    ┌─────▼─────┐  ┌────▼──────────────────────┐
+    │  Push      │  │  CONFLICT                 │
+    │  (normal)  │  │  Set fm.conflict_sections │
+    └────────────┘  │  Notify user              │
+                    └───────────────────────────┘
                           │
                     User runs :LongwayResolve
                      ╱       │        ╲
                   local   remote    manual
                     │        │         │
                Force push  Force   Insert conflict
-               update      pull    markers in file
-               state       update
-                           state
-```
-
-### State Storage
-
-Per-story/epic state is stored in `.longway/state/{shortcut_id}.json`:
-
-```json
-{
-  "shortcut_id": 12345,
-  "shortcut_type": "story",
-  "last_synced_at": 1706300000,
-  "remote_updated_at": "2026-01-20T14:30:00Z",
-  "sections": {
-    "description": {
-      "local_hash": "abc12345",
-      "remote_hash": "abc12345"
-    },
-    "tasks": {
-      "local_hash": "def67890",
-      "remote_hash": "def67890"
-    },
-    "comments": {
-      "local_hash": "ghi11111",
-      "remote_hash": "ghi11111"
-    }
-  },
-  "conflict": null
-}
-```
-
-When a conflict is detected, the `conflict` field is populated:
-
-```json
-{
-  "conflict": {
-    "detected_at": 1706300100,
-    "sections": ["description"],
-    "remote_updated_at": "2026-01-21T10:00:00Z",
-    "local_description_hash": "new_local",
-    "remote_description": "...remote content..."
-  }
-}
+               update fm   pull    markers in file
+                           update
+                           fm
 ```
 
 ---
 
 ## Implementation Steps
 
-### Step 1: Create Sync State Module
-
-**File:** `fnl/longway/cache/state.fnl`
-
-**Pattern:** Mirrors `cache/store.fnl` for JSON file I/O but specialized for per-entity sync state.
-
-**Functions to implement:**
-
-```fennel
-;;; State File I/O
-M.get-state-path [shortcut-id]       ;; → ".longway/state/{id}.json"
-M.load [shortcut-id]                 ;; Read state JSON, return table or nil
-M.save [shortcut-id state]           ;; Write state JSON
-
-;;; State Queries
-M.get-section-hashes [shortcut-id]   ;; → {:description {:local_hash :remote_hash} ...}
-M.get-remote-updated-at [shortcut-id] ;; → timestamp string or nil
-M.get-conflict [shortcut-id]         ;; → conflict table or nil
-M.has-conflict? [shortcut-id]        ;; → bool
-
-;;; State Updates
-M.update-after-sync [shortcut-id data]
-  ;; data: {:remote_updated_at string
-  ;;        :sections {:description {:local_hash :remote_hash} ...}
-  ;;        :shortcut_type string}
-  ;; Clears any existing conflict, updates last_synced_at
-
-M.set-conflict [shortcut-id conflict-data]
-  ;; Store conflict state for later resolution
-
-M.clear-conflict [shortcut-id]
-  ;; Clear conflict after resolution
-```
-
-**Key implementation details:**
-- State files live in `{workspace}/.longway/state/` directory
-- Use `vim.fn.mkdir` with `"p"` flag to ensure directory exists
-- Use `vim.json.encode`/`vim.json.decode` for serialization (same as `cache/store.fnl`)
-- `update-after-sync` is called at the end of every successful push/pull to snapshot the current state
-- State is per-entity (one JSON file per story/epic)
-
-**Test file:** `fnl/longway-spec/cache/state_spec.fnl`
-
-**Tests:**
-- Load returns nil for non-existent state
-- Save and load round-trips correctly
-- `update-after-sync` sets all fields and clears conflicts
-- `set-conflict` and `clear-conflict` work correctly
-- `has-conflict?` returns correct boolean
-
----
-
-### Step 2: Create Change Detection Module
+### Step 1: Create Change Detection Module
 
 **File:** `fnl/longway/sync/diff.fnl`
 
-**Pattern:** New module; uses `util/hash.fnl` for hashing and `cache/state.fnl` for stored state.
+Uses `util/hash.fnl` for hashing and reads frontmatter from parsed content for stored state.
 
 **Functions to implement:**
 
 ```fennel
 ;;; Section-level change detection
-M.detect-local-changes [shortcut-id parsed]
-  ;; Compare current parsed content against stored state
+M.detect-local-changes [parsed]
+  ;; Compare current parsed content against frontmatter hashes
   ;; parsed: output of parser.parse (has .description, .tasks, .comments, .frontmatter)
-  ;; Returns: {:description :changed|:unchanged
-  ;;           :tasks :changed|:unchanged
-  ;;           :comments :changed|:unchanged}
+  ;; Reads sync_hash, tasks_hash, comments_hash from parsed.frontmatter
+  ;; Returns: {:description bool :tasks bool :comments bool}
+  ;;          (true = changed)
 
-M.detect-remote-changes [shortcut-id remote-story]
-  ;; Compare remote updated_at against stored state
-  ;; Returns: {:changed bool :remote_updated_at string :stored_updated_at string}
+M.detect-remote-change [frontmatter remote-updated-at]
+  ;; Compare remote updated_at against frontmatter.updated_at
+  ;; Returns: bool (true = remote changed)
 
-M.classify-sync [shortcut-id parsed remote-story]
+M.classify [parsed remote-updated-at]
   ;; Full classification combining local and remote detection
   ;; Returns: {:status :clean|:local-only|:remote-only|:conflict
   ;;           :local_changes {:description bool :tasks bool :comments bool}
-  ;;           :remote_changed bool
-  ;;           :remote_updated_at string}
+  ;;           :remote_changed bool}
 
 ;;; Helpers
 M.compute-section-hashes [parsed]
-  ;; Compute hashes for all sections from parsed content
+  ;; Compute current hashes for all sections from parsed content
   ;; Returns: {:description "hash" :tasks "hash" :comments "hash"}
 
-M.first-sync? [shortcut-id]
-  ;; Returns true if no sync state exists (never synced before)
+M.any-local-change? [parsed]
+  ;; Returns true if ANY section has local changes vs. frontmatter hashes
+  ;; Convenience wrapper over detect-local-changes
+
+M.first-sync? [frontmatter]
+  ;; Returns true if frontmatter has no sync_hash (never synced before)
+  ;; In this case skip conflict checks — treat as initial sync
 ```
 
 **Key implementation details:**
-- For local change detection: compare current section hashes against `state.sections.{section}.local_hash`
-- For remote change detection: compare `remote-story.updated_at` against `state.remote_updated_at`
-- `first-sync?` returns true when no state file exists — in this case, skip conflict checks (treat as initial sync)
-- `classify-sync` is the main entry point used by the push flow
+- All state comes from `parsed.frontmatter` — no external state files
+- `first-sync?` checks if `sync_hash` is empty/nil (set to `""` on initial render)
+- `classify` is the main entry point used by the push flow
+- For first syncs, always return `:local-only` (safe to push without conflict check)
 
 **Test file:** `fnl/longway-spec/sync/diff_spec.fnl`
 
 **Tests:**
-- First sync (no state) returns `:clean` status
+- First sync (empty hashes) returns `:local-only` for any local content
 - No changes detected returns `:clean`
-- Local-only change detected correctly
-- Remote-only change detected correctly
+- Local-only change detected correctly (hash mismatch, same `updated_at`)
+- Remote-only change detected correctly (hashes match, different `updated_at`)
 - Both changed returns `:conflict`
-- `compute-section-hashes` produces correct hashes
+- `compute-section-hashes` produces correct hashes matching `util/hash` functions
 - Each section detected independently (description changed but tasks unchanged)
+- `any-local-change?` returns true when any section differs
 
 ---
 
-### Step 3: Create Conflict Resolution Module
+### Step 2: Create Conflict Resolution Module
 
 **File:** `fnl/longway/sync/resolve.fnl`
 
-**Pattern:** New module; orchestrates resolution strategies.
+Orchestrates resolution strategies. Reads/writes frontmatter for conflict state.
 
 **Functions to implement:**
 
@@ -246,59 +187,58 @@ M.resolve [strategy opts]
   ;; Main entry point — dispatches to strategy handler
   ;; strategy: "local" | "remote" | "manual"
   ;; opts: {:bufnr number}  (defaults to current buffer)
+  ;; 1. Parse current buffer to get shortcut_id and frontmatter
+  ;; 2. Verify conflict_sections exists in frontmatter
+  ;; 3. Dispatch to resolve-local / resolve-remote / resolve-manual
   ;; Returns: {:ok bool :error string}
 
 M.resolve-local [shortcut-id parsed bufnr]
   ;; Force push local content to Shortcut, ignoring remote changes
-  ;; 1. Push description, tasks, comments normally (bypassing conflict check)
-  ;; 2. Update sync state with new hashes
-  ;; 3. Clear conflict state
+  ;; 1. Call push.push-story with {:force true} to bypass conflict check
+  ;; 2. Clear conflict_sections from frontmatter
   ;; Returns: {:ok bool :error string}
 
 M.resolve-remote [shortcut-id bufnr]
   ;; Force pull remote content, discarding local changes
   ;; 1. Fetch fresh story from API
-  ;; 2. Re-render markdown and replace buffer contents
-  ;; 3. Update sync state with new hashes
-  ;; 4. Clear conflict state
+  ;; 2. Re-render markdown and replace buffer contents (reuses pull logic)
+  ;; 3. Frontmatter is regenerated fresh (no conflict_sections)
   ;; Returns: {:ok bool :error string}
 
-M.resolve-manual [shortcut-id conflict bufnr]
-  ;; Insert conflict markers into the file for manual resolution
-  ;; Only applies to description section (tasks/comments use structured merge)
-  ;; Format:
-  ;;   <!-- CONFLICT: Local version -->
-  ;;   {local description content}
-  ;;   <!-- CONFLICT: Remote version -->
-  ;;   {remote description content}
-  ;;   <!-- END CONFLICT -->
+M.resolve-manual [shortcut-id bufnr]
+  ;; Insert conflict markers into the description sync section
+  ;; 1. Fetch remote story description
+  ;; 2. Find the description sync section in buffer
+  ;; 3. Replace with conflict markers showing both versions:
+  ;;    <!-- CONFLICT: Local version -->
+  ;;    {local description content}
+  ;;    <!-- CONFLICT: Remote version (updated 2026-01-21T10:00:00Z) -->
+  ;;    {remote description content}
+  ;;    <!-- END CONFLICT — edit above, then :LongwayPush to resolve -->
+  ;; 4. Clear conflict_sections from frontmatter (user is now manually resolving)
   ;; Returns: {:ok bool :error string}
-
-M.get-conflict-status [shortcut-id]
-  ;; Get current conflict state for display
-  ;; Returns: {:has_conflict bool :sections [string] :detected_at number} or nil
 ```
 
 **Key implementation details:**
-- `resolve-local` reuses `push.push-story` but passes an option to skip the remote check
-- `resolve-remote` reuses `pull.refresh-current-buffer` logic
-- `resolve-manual` fetches remote description and inserts conflict markers around the description sync section
-- After any resolution, sync state is updated and conflict is cleared
-- The `resolve` entry point reads the current buffer, parses frontmatter to get `shortcut_id`, then dispatches
+- `resolve-local` delegates to `push.push-story` with `{:force true}`
+- `resolve-remote` delegates to `pull.refresh-current-buffer` (which regenerates frontmatter)
+- `resolve-manual` only applies to the description section — tasks and comments use structured merge via their existing diff/push logic and don't need manual markers
+- Conflict state is cleared from frontmatter after any resolution strategy
+- `resolve` validates that the buffer actually has `conflict_sections` set before proceeding
 
 **Test file:** `fnl/longway-spec/sync/resolve_spec.fnl`
 
 **Tests:**
 - `resolve` dispatches to correct strategy
-- `resolve` errors on invalid strategy
-- `resolve` errors when buffer has no shortcut_id
-- `resolve-manual` inserts correct conflict markers
-- Conflict markers follow the format from PRD section 4.3
-- Resolution clears conflict state
+- `resolve` errors on invalid strategy name
+- `resolve` errors when buffer has no `shortcut_id`
+- `resolve` errors when no conflict exists (`conflict_sections` is nil)
+- `resolve-manual` inserts correct conflict markers in description section
+- Conflict markers include remote timestamp for context
 
 ---
 
-### Step 4: Integrate Change Detection into Push Flow
+### Step 3: Integrate Change Detection into Push Flow
 
 **File:** `fnl/longway/sync/push.fnl` (modify existing)
 
@@ -309,115 +249,64 @@ M.get-conflict-status [shortcut-id]
 ```fennel
 (fn check-remote-before-push [story-id parsed]
   "Check if remote has changed since last sync.
-   Returns: {:ok bool :conflict bool :remote-story table :error string}"
-  (let [diff (require :longway.sync.diff)
-        state (require :longway.cache.state)]
-    ;; Skip check if this is first sync (no stored state)
-    (if (diff.first-sync? story-id)
+   Returns: {:ok bool :conflict bool :classification table :error string}"
+  (let [diff (require :longway.sync.diff)]
+    ;; Skip check on first sync
+    (if (diff.first-sync? parsed.frontmatter)
         {:ok true :conflict false}
         ;; Fetch remote story to check updated_at
         (let [remote-result (stories-api.get story-id)]
           (if (not remote-result.ok)
               {:ok false :error remote-result.error}
-              (let [classification (diff.classify-sync story-id parsed remote-result.data)]
-                (if (= classification.status :conflict)
-                    ;; Store conflict state for resolution
-                    (do
-                      (state.set-conflict story-id
-                        {:detected_at (os.time)
-                         :sections (icollect [section changed (pairs classification.local_changes)]
-                                    (when changed section))
-                         :remote_updated_at classification.remote_updated_at})
-                      {:ok true :conflict true :classification classification})
-                    {:ok true :conflict false
-                     :remote-story remote-result.data
-                     :classification classification})))))))
+              (let [classification (diff.classify parsed remote-result.data.updated_at)]
+                {:ok true
+                 :conflict (= classification.status :conflict)
+                 :classification classification
+                 :remote-story remote-result.data}))))))
 ```
 
-2. Modify `M.push-story` to call `check-remote-before-push` before proceeding:
-   - If conflict detected, notify user and return `{:ok false :conflict true}`
-   - Add an `opts.force` flag that skips the remote check (used by `resolve-local`)
+2. Modify `M.push-story` to call `check-remote-before-push` at the start:
+   - If `opts.force` is true, skip the check entirely (used by `resolve-local`)
+   - If conflict detected:
+     - Set `conflict_sections` in frontmatter listing which sections have local changes
+     - Notify user: "Conflict detected — remote has changed. Use :LongwayResolve to resolve."
+     - Return `{:ok false :conflict true}`
 
-3. After successful push, call `state.update-after-sync` to snapshot current state:
+3. After successful push, update frontmatter hashes and `updated_at`:
+   - This is already partially done (tasks_hash and comments_hash are updated)
+   - Add: update `sync_hash` with new description hash
+   - Add: update `updated_at` with the remote `updated_at` from the push response
+   - Clear `conflict_sections` if present
 
-```fennel
-;; At end of successful push in push-story:
-(let [diff-mod (require :longway.sync.diff)
-      state-mod (require :longway.cache.state)
-      section-hashes (diff-mod.compute-section-hashes parsed)]
-  (state-mod.update-after-sync story-id
-    {:remote_updated_at (or (and results.description
-                                 results.description.story
-                                 results.description.story.updated_at)
-                            "")
-     :shortcut_type "story"
-     :sections {:description {:local_hash section-hashes.description
-                              :remote_hash section-hashes.description}
-                :tasks {:local_hash section-hashes.tasks
-                        :remote_hash section-hashes.tasks}
-                :comments {:local_hash section-hashes.comments
-                           :remote_hash section-hashes.comments}}}))
-```
-
-**Test file:** `fnl/longway-spec/sync/push_spec.fnl` (extend existing)
-
-**New tests:**
-- Push with no prior state succeeds (first sync, no conflict check)
+**Test updates:** Add to existing push tests:
+- Push with no prior sync_hash succeeds (first sync, no conflict check)
 - Push with unchanged remote succeeds normally
-- Push with changed remote triggers conflict notification
-- Push with `force: true` skips conflict check
-- Successful push updates sync state
+- Push with changed remote sets `conflict_sections` and returns `{:conflict true}`
+- Push with `{:force true}` skips conflict check
+- Successful push updates `sync_hash` and `updated_at` in frontmatter
 
 ---
 
-### Step 5: Integrate State Tracking into Pull Flow
+### Step 4: Integrate State Tracking into Pull Flow
 
 **File:** `fnl/longway/sync/pull.fnl` (modify existing)
 
 **Changes:**
 
-1. After successful pull, update sync state:
+After successful pull/refresh, the rendered markdown already includes fresh hashes via `renderer.render-story` (which calls `hash.content-hash`, `hash.tasks-hash`, `hash.comments-hash` and sets them in frontmatter). The `updated_at` from the API response is also written to frontmatter.
 
-```fennel
-;; After writing the story file in pull-story:
-(let [diff-mod (require :longway.sync.diff)
-      state-mod (require :longway.cache.state)
-      ;; Parse the just-written markdown to get section hashes
-      parser-mod (require :longway.markdown.parser)
-      parsed (parser-mod.parse markdown)
-      section-hashes (diff-mod.compute-section-hashes parsed)]
-  (state-mod.update-after-sync story.id
-    {:remote_updated_at (or story.updated_at "")
-     :shortcut_type "story"
-     :sections {:description {:local_hash section-hashes.description
-                              :remote_hash section-hashes.description}
-                :tasks {:local_hash section-hashes.tasks
-                        :remote_hash section-hashes.tasks}
-                :comments {:local_hash section-hashes.comments
-                           :remote_hash section-hashes.comments}}}))
-```
+This means **pull already writes correct sync state** — no changes needed for basic state tracking.
 
-2. Similarly update state after `refresh-current-buffer` succeeds.
-
-**No new test file** — extend existing pull specs if they exist, or add focused state-tracking tests to `state_spec.fnl`.
+However, one addition:
+- In `refresh-current-buffer`, clear `conflict_sections` from frontmatter if present (a refresh is effectively "resolve remote")
 
 ---
 
-### Step 6: Implement Auto-Push on Save
+### Step 5: Implement Auto-Push on Save
 
-**File:** `fnl/longway/init.fnl` (modify existing)
+**File:** `fnl/longway/sync/auto.fnl` (new)
 
-**Changes:**
-
-1. Add an `auto-push` module or inline the autocmd setup in `M.setup`:
-
-```fennel
-;; In M.setup, after config is set:
-(when (. (config.get) :auto_push_on_save)
-  (setup-auto-push))
-```
-
-2. Create a new module `fnl/longway/sync/auto.fnl`:
+**Functions to implement:**
 
 ```fennel
 M.setup []
@@ -425,9 +314,9 @@ M.setup []
   ;; Register BufWritePost autocmd for *.md files in workspace dir
   ;; Autocmd callback:
   ;;   1. Check if file is in workspace dir
-  ;;   2. Check if file has shortcut_id in frontmatter
+  ;;   2. Parse buffer to check for shortcut_id in frontmatter
   ;;   3. Debounce: cancel any pending timer, set new timer
-  ;;   4. On timer fire: run push (which includes conflict detection)
+  ;;   4. On timer fire: run push-current-buffer (includes conflict detection)
 
 M.teardown []
   ;; Remove augroup (for config changes / plugin reload)
@@ -437,29 +326,30 @@ M.is-active []
 ```
 
 **Key implementation details:**
-- Use `vim.api.nvim_create_augroup("longway_auto_push", {clear = true})` for clean setup
-- Use `vim.api.nvim_create_autocmd("BufWritePost", ...)` with pattern matching workspace dir
-- Debounce with `vim.defer_fn` — store timer reference in module-local variable
-- Cancel previous timer with `vim.fn.timer_stop` if one is pending (or use `vim.uv.new_timer()` for more control)
-- The autocmd callback should:
-  1. Parse the buffer to verify it's a longway file (has `shortcut_id`)
-  2. Schedule a deferred push via `vim.defer_fn`
-  3. On push, if conflict detected, notify user but don't auto-resolve
-- Must handle the case where user saves multiple times quickly (debounce resets)
-- Must NOT auto-push if the buffer is the result of a pull/refresh (to avoid push-back loops) — detect this by comparing hashes immediately after pull
+- Use `vim.api.nvim_create_augroup("longway_auto_push", {clear = true})`
+- Use `vim.api.nvim_create_autocmd("BufWritePost", ...)` with pattern `"*.md"`
+- In the callback, verify the file path is within `config.get-workspace-dir()`
+- Debounce using `vim.uv.new_timer()`:
+  - Store timer per buffer (table keyed by bufnr)
+  - On each save: stop existing timer for that buffer, start new one with `auto_push_delay`
+  - On timer fire: call `push.push-current-buffer()`
+- **Loop prevention:** After a pull/refresh writes the buffer, the BufWritePost fires. To avoid immediately pushing back:
+  - Check `diff.any-local-change?(parsed)` before pushing — if hashes match frontmatter, skip (the pull just wrote those hashes)
+  - This is free since the pull sets hashes matching the content it wrote
+- Conflict during auto-push: notify user, do not auto-resolve
 
 **Test file:** `fnl/longway-spec/sync/auto_spec.fnl`
 
 **Tests:**
 - Auto-push is not set up when `auto_push_on_save` is false
-- Auto-push creates augroup when enabled
-- Teardown removes the augroup
-- Debounce logic: rapid saves result in single push
-- Non-longway files in workspace are ignored
+- `setup` creates augroup
+- `teardown` removes augroup
+- `is-active` returns correct state
+- Non-longway markdown files are ignored (no shortcut_id)
 
 ---
 
-### Step 7: Add `:LongwayResolve` Command and Enhance `:LongwayStatus`
+### Step 6: Add `:LongwayResolve` Command and Enhance `:LongwayStatus`
 
 **File:** `plugin/longway.lua` (modify existing)
 
@@ -484,9 +374,7 @@ end, {
 
 **File:** `fnl/longway/core.fnl` (modify existing)
 
-**Changes:**
-
-1. Add `M.resolve` function:
+Add `M.resolve`:
 
 ```fennel
 (fn M.resolve [strategy]
@@ -497,40 +385,22 @@ end, {
         (resolve-mod.resolve strategy {}))))
 ```
 
-2. Enhance `M.status` to show sync state and conflicts:
+Enhance `M.status` to show conflict info:
 
 ```fennel
-;; After existing status output, add:
-(let [state-mod (require :longway.cache.state)
-      sync-state (state-mod.load fm.shortcut_id)]
-  (when sync-state
-    (print (string.format "Last synced: %s"
-                          (if sync-state.last_synced_at
-                              (os.date "%Y-%m-%d %H:%M" sync-state.last_synced_at)
-                              "never")))
-    (when (state-mod.has-conflict? fm.shortcut_id)
-      (let [conflict (state-mod.get-conflict fm.shortcut_id)]
-        (print (string.format "⚠ CONFLICT detected at %s"
-                              (os.date "%Y-%m-%d %H:%M" conflict.detected_at)))
-        (print (string.format "  Affected sections: %s"
-                              (table.concat conflict.sections ", ")))
-        (print "  Resolve with: :LongwayResolve <local|remote|manual>")))))
+;; After existing status output:
+(when fm.conflict_sections
+  (notify.warn (string.format "CONFLICT in: %s — resolve with :LongwayResolve <local|remote|manual>"
+                              (table.concat fm.conflict_sections ", "))))
 ```
 
 **File:** `fnl/longway/init.fnl` (modify existing)
 
-**Changes:**
-
-1. Expose the new `resolve` function:
-
 ```fennel
+;; Expose Phase 5 functions
 (set M.resolve core.resolve)
-```
 
-2. Wire up auto-push setup in `M.setup`:
-
-```fennel
-;; After config validation:
+;; In M.setup, wire auto-push:
 (when (. (config.get) :auto_push_on_save)
   (let [auto (require :longway.sync.auto)]
     (auto.setup)))
@@ -538,54 +408,26 @@ end, {
 
 ---
 
-### Step 8: Write Test Specifications
-
-Create test files for all new modules:
-
-| Test File | Tests | Priority |
-|-----------|-------|----------|
-| `fnl/longway-spec/cache/state_spec.fnl` | State CRUD, round-trip, conflict tracking | High |
-| `fnl/longway-spec/sync/diff_spec.fnl` | Change detection, classification | High |
-| `fnl/longway-spec/sync/resolve_spec.fnl` | Resolution strategies, marker format | High |
-| `fnl/longway-spec/sync/auto_spec.fnl` | Autocmd setup, debounce, teardown | Medium |
-
-**Test approach:** Follow existing pattern from Phase 3/4 specs:
-- Use `plenary.busted` (`describe`, `it`, `assert.are.same`)
-- Mock API calls where needed
-- Test pure functions directly (hashing, classification, marker generation)
-- Test state file I/O using temp directories
-
----
-
 ## Implementation Order
 
-The steps should be implemented in this order due to dependencies:
-
 ```
-Step 1: cache/state.fnl          ← Foundation: state persistence
+Step 1: sync/diff.fnl            ← Foundation: change detection from frontmatter
+   │
+   ├──► Step 3: push.fnl mods    ← Pre-push conflict check + state update
+   │
+   ├──► Step 4: pull.fnl mods    ← Clear conflict_sections on refresh
    │
    ▼
-Step 2: sync/diff.fnl            ← Uses state for comparison
-   │
-   ├──► Step 4: push.fnl mods    ← Uses diff for pre-push check
-   │       │
-   │       ▼
-   ├──► Step 5: pull.fnl mods    ← Updates state after pull
+Step 2: sync/resolve.fnl         ← Uses diff, delegates to push/pull
    │
    ▼
-Step 3: sync/resolve.fnl         ← Uses state + diff for resolution
+Step 5: sync/auto.fnl            ← Uses push (which uses diff)
    │
    ▼
-Step 6: sync/auto.fnl            ← Uses push (which uses diff)
-   │
-   ▼
-Step 7: Commands & Status         ← Wires everything together
-   │
-   ▼
-Step 8: Tests                     ← Comprehensive test coverage
+Step 6: Commands & Status         ← Wires everything together
 ```
 
-Steps 4 and 5 can be done in parallel after Step 2. Step 8 (tests) should be written alongside each step, not deferred.
+Steps 3 and 4 can be done in parallel after Step 1. Tests should be written alongside each step.
 
 ---
 
@@ -593,24 +435,39 @@ Steps 4 and 5 can be done in parallel after Step 2. Step 8 (tests) should be wri
 
 | File | Type | Description |
 |------|------|-------------|
-| `fnl/longway/cache/state.fnl` | New | Per-entity sync state persistence |
-| `fnl/longway/sync/diff.fnl` | New | Section-level change detection |
-| `fnl/longway/sync/resolve.fnl` | New | Conflict resolution strategies |
+| `fnl/longway/sync/diff.fnl` | New | Section-level change detection using frontmatter hashes |
+| `fnl/longway/sync/resolve.fnl` | New | Conflict resolution strategies (local/remote/manual) |
 | `fnl/longway/sync/auto.fnl` | New | Auto-push on save with debounce |
-| `fnl/longway-spec/cache/state_spec.fnl` | New | State module tests |
-| `fnl/longway-spec/sync/diff_spec.fnl` | New | Diff module tests |
-| `fnl/longway-spec/sync/resolve_spec.fnl` | New | Resolve module tests |
+| `fnl/longway-spec/sync/diff_spec.fnl` | New | Change detection tests |
+| `fnl/longway-spec/sync/resolve_spec.fnl` | New | Conflict resolution tests |
 | `fnl/longway-spec/sync/auto_spec.fnl` | New | Auto-push tests |
 
 ## Modified Files Summary
 
 | File | Changes |
 |------|---------|
-| `fnl/longway/sync/push.fnl` | Add pre-push remote check, state update after push, `force` option |
-| `fnl/longway/sync/pull.fnl` | Add state update after pull/refresh |
-| `fnl/longway/core.fnl` | Add `M.resolve`, enhance `M.status` with sync state |
+| `fnl/longway/sync/push.fnl` | Add pre-push conflict check, `force` option, update `sync_hash`/`updated_at` |
+| `fnl/longway/sync/pull.fnl` | Clear `conflict_sections` on refresh |
+| `fnl/longway/core.fnl` | Add `M.resolve`, enhance `M.status` with conflict info |
 | `fnl/longway/init.fnl` | Expose `resolve`, wire auto-push setup |
 | `plugin/longway.lua` | Add `:LongwayResolve` command |
+
+## Frontmatter Changes
+
+One new field added to frontmatter:
+
+| Field | Type | Default | Purpose |
+|-------|------|---------|---------|
+| `conflict_sections` | list or nil | nil | Sections with unresolved conflicts (e.g., `["description"]`) |
+
+Existing fields used for change detection (no changes):
+
+| Field | Purpose in Phase 5 |
+|-------|---------------------|
+| `sync_hash` | Baseline description hash — compared against current to detect local edits |
+| `tasks_hash` | Baseline tasks hash — compared against current to detect local edits |
+| `comments_hash` | Baseline comments hash — compared against current to detect local edits |
+| `updated_at` | Remote timestamp — compared against API to detect remote changes |
 
 ---
 
@@ -631,12 +488,12 @@ No config changes needed.
 
 ## Phase 5 Deliverables
 
-- [ ] Sync state tracked per story/epic in `.longway/state/`
-- [ ] Pre-push conflict detection (compares local and remote changes)
-- [ ] Conflict notification when both local and remote have diverged
+- [ ] Change detection via frontmatter hashes (no separate state files)
+- [ ] Pre-push conflict detection (compares local hashes + remote `updated_at`)
+- [ ] Conflict notification with `conflict_sections` tracked in frontmatter
 - [ ] `:LongwayResolve local` — Force push local content
 - [ ] `:LongwayResolve remote` — Force pull remote content
 - [ ] `:LongwayResolve manual` — Insert conflict markers for manual resolution
-- [ ] `:LongwayStatus` enhanced to show sync state and conflict info
+- [ ] `:LongwayStatus` enhanced to show conflict info
 - [ ] Auto-push on save (opt-in, debounced, conflict-aware)
 - [ ] Comprehensive test coverage for all new modules
