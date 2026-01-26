@@ -2,6 +2,13 @@
 local config = require("longway.config")
 local members = require("longway.api.members")
 local M = {}
+local function safe_text(val)
+  if (type(val) == "string") then
+    return val
+  else
+    return ""
+  end
+end
 local function parse_comment_metadata(header_line)
   local pattern = "%*%*(.-)%*%*%s*\194\183%s*([%d%-]+%s*[%d:]+)%s*<!%-%-[%s]*comment:(%S+)%s*%-%->"
   local author, timestamp, id = string.match(header_line, pattern)
@@ -84,7 +91,7 @@ M["get-current-user"] = function()
 end
 M["format-timestamp"] = function(created_at)
   local cfg = config.get()
-  if not created_at then
+  if (not created_at or (type(created_at) ~= "string")) then
     return ""
   else
     local year, month, day, hour, min, sec = string.match(created_at, "(%d+)-(%d+)-(%d+)T(%d+):(%d+):(%d+)")
@@ -107,7 +114,7 @@ M["render-comment"] = function(cmt)
     id_part = "new"
   end
   local metadata = string.format("<!-- comment:%s -->", id_part)
-  return table.concat({"---", string.format("**%s** \194\183 %s %s", author_name, timestamp, metadata), "", (cmt.text or "")}, "\n")
+  return table.concat({"---", string.format("**%s** \194\183 %s %s", author_name, timestamp, metadata), "", safe_text(cmt.text)}, "\n")
 end
 M["render-comments"] = function(comments)
   if (not comments or (#comments == 0)) then
@@ -132,7 +139,7 @@ M["format-api-comments"] = function(raw_comments)
   for _, cmt in ipairs((raw_comments or {})) do
     local author_name = M["resolve-author-name"](cmt.author_id)
     local timestamp = M["format-timestamp"](cmt.created_at)
-    table.insert(formatted, {id = cmt.id, author = author_name, timestamp = timestamp, text = (cmt.text or ""), is_new = false})
+    table.insert(formatted, {id = cmt.id, author = author_name, timestamp = timestamp, text = safe_text(cmt.text), is_new = false})
   end
   return formatted
 end
