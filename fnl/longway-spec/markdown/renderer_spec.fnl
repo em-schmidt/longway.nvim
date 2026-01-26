@@ -62,14 +62,14 @@
         (it "renders comments section when enabled"
           (fn []
             (t.setup-test-config {:sync_sections {:comments true}})
-            (let [story (t.make-story {:comments [(t.make-comment {:text "Test comment"})]})
+            (let [story (t.make-story {:comments [(t.make-parsed-comment {:text "Test comment"})]})
                   result ((. renderer "render-story") story)]
               (assert.has_sync_section result "comments")
               (assert.has_substring result "Test comment"))))
 
         (it "includes comment author"
           (fn []
-            (let [story (t.make-story {:comments [(t.make-comment {:author {:profile {:name "John Doe"}}})]})
+            (let [story (t.make-story {:comments [(t.make-parsed-comment {:author "John Doe"})]})
                   result ((. renderer "render-story") story)]
               (assert.has_substring result "John Doe"))))
 

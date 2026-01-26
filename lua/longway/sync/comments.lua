@@ -63,9 +63,7 @@ local function push_created_comments(story_id, comments)
       cmt.id = result.data.id
       cmt.is_new = false
       if result.data.created_at then
-        local formatted = string.sub(result.data.created_at, 1, 16)
-        local timestamp = string.gsub(formatted, "T", " ")
-        cmt.timestamp = timestamp
+        cmt.timestamp = comments_md["format-timestamp"](result.data.created_at)
       else
       end
       table.insert(result_comments, cmt)

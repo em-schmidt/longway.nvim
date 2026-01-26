@@ -172,6 +172,88 @@ local function _1_()
   describe("merge", _18_)
   local function _25_()
     local function _26_()
+      return assert.is_function(comments_sync.pull)
+    end
+    it("exports pull function", _26_)
+    local function _27_()
+      local comments_api = require("longway.api.comments")
+      local members = require("longway.api.members")
+      local original_list = comments_api.list
+      local original_resolve = members["resolve-name"]
+      local function _28_(story_id)
+        return {ok = true, data = {{id = 101, text = "Hello", author_id = "uuid-1", created_at = "2026-01-10T10:30:00Z"}, {id = 102, text = "World", author_id = "uuid-2", created_at = "2026-01-11T14:00:00Z"}}}
+      end
+      comments_api.list = _28_
+      local function _29_(id)
+        if (id == "uuid-1") then
+          return "Alice"
+        elseif (id == "uuid-2") then
+          return "Bob"
+        else
+          return id
+        end
+      end
+      members["resolve-name"] = _29_
+      do
+        local result = comments_sync.pull(12345)
+        assert.is_true(result.ok)
+        assert.equals(2, #result.comments)
+        assert.equals("Alice", result.comments[1].author)
+        assert.equals("Bob", result.comments[2].author)
+        assert.equals("Hello", result.comments[1].text)
+        assert.equals("2026-01-10 10:30", result.comments[1].timestamp)
+        assert.is_false(result.comments[1].is_new)
+      end
+      comments_api.list = original_list
+      members["resolve-name"] = original_resolve
+      return nil
+    end
+    it("formats API comments through format-api-comments", _27_)
+    local function _31_()
+      t["setup-test-config"]({comments = {max_pull = 1, show_timestamps = true, timestamp_format = "%Y-%m-%d %H:%M", confirm_delete = true}})
+      local comments_api = require("longway.api.comments")
+      local members = require("longway.api.members")
+      local original_list = comments_api.list
+      local original_resolve = members["resolve-name"]
+      local function _32_(story_id)
+        return {ok = true, data = {{id = 1, text = "First", author_id = "u1", created_at = "2026-01-10T10:00:00Z"}, {id = 2, text = "Second", author_id = "u2", created_at = "2026-01-11T10:00:00Z"}, {id = 3, text = "Third", author_id = "u3", created_at = "2026-01-12T10:00:00Z"}}}
+      end
+      comments_api.list = _32_
+      local function _33_(id)
+        return id
+      end
+      members["resolve-name"] = _33_
+      do
+        local result = comments_sync.pull(12345)
+        assert.is_true(result.ok)
+        assert.equals(1, #result.comments)
+      end
+      comments_api.list = original_list
+      members["resolve-name"] = original_resolve
+      return nil
+    end
+    it("respects max_pull limit", _31_)
+    local function _34_()
+      local comments_api = require("longway.api.comments")
+      local original_list = comments_api.list
+      local function _35_(story_id)
+        return {error = "Network error", ok = false}
+      end
+      comments_api.list = _35_
+      do
+        local result = comments_sync.pull(12345)
+        assert.is_false(result.ok)
+        assert.equals("Network error", result.error)
+        assert.equals(0, #result.comments)
+      end
+      comments_api.list = original_list
+      return nil
+    end
+    return it("returns error when API fails", _34_)
+  end
+  describe("pull", _25_)
+  local function _36_()
+    local function _37_()
       local local_content = "---\n**Alice** \194\183 2026-01-10 10:00 <!-- comment:101 -->\n\nExisting comment.\n\n---\n**Me** \194\183 2026-01-20 15:00 <!-- comment:new -->\n\nNew from user."
       local local_comments = comments_md["parse-section"](local_content)
       local remote_comments = {{id = 101, text = "Existing comment.", is_new = false}, {id = 102, text = "Another remote comment", is_new = false}}
@@ -180,8 +262,8 @@ local function _1_()
       assert.equals(1, #diff.deleted)
       return assert.equals(102, diff.deleted[1])
     end
-    it("parses markdown, diffs with remote, detects changes", _26_)
-    local function _27_()
+    it("parses markdown, diffs with remote, detects changes", _37_)
+    local function _38_()
       local comments = {{id = 1, text = "Comment A"}, {id = 2, text = "Comment B"}}
       local hash1 = hash["comments-hash"](comments)
       local hash2 = hash["comments-hash"](comments)
@@ -190,8 +272,8 @@ local function _1_()
       local hash3 = hash["comments-hash"](modified)
       return assert.is_not.equals(hash1, hash3)
     end
-    return it("computes stable hash for comments before and after round-trip", _27_)
+    return it("computes stable hash for comments before and after round-trip", _38_)
   end
-  return describe("integration: parse-diff round-trip", _25_)
+  return describe("integration: parse-diff round-trip", _36_)
 end
 return describe("longway.sync.comments", _1_)

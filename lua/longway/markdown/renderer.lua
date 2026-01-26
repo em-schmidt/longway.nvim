@@ -4,6 +4,7 @@ local frontmatter = require("longway.markdown.frontmatter")
 local hash = require("longway.util.hash")
 local slug = require("longway.util.slug")
 local tasks_md = require("longway.markdown.tasks")
+local comments_md = require("longway.markdown.comments")
 local M = {}
 local function generate_story_filename(story)
   return slug["make-filename"](story.id, story.name, "story")
@@ -65,32 +66,12 @@ local function render_tasks(tasks)
     return render_sync_section("tasks", content)
   end
 end
-local function render_comment(cmt)
-  local author_name
-  if (type(cmt.author) == "string") then
-    author_name = cmt.author
-  else
-    author_name = ((cmt.author and cmt.author.profile and cmt.author.profile.name) or "Unknown")
-  end
-  local timestamp
-  if cmt.created_at then
-    timestamp = string.sub(cmt.created_at, 1, 16)
-  else
-    timestamp = ""
-  end
-  local formatted_time = string.gsub(timestamp, "T", " ")
-  local metadata = string.format("<!-- comment:%s -->", tostring(cmt.id))
-  return table.concat({"---", string.format("**%s** \194\183 %s %s", author_name, formatted_time, metadata), "", (cmt.text or "")}, "\n")
-end
 local function render_comments(comments)
   if (not comments or (#comments == 0)) then
     return render_sync_section("comments", "")
   else
-    local lines = {}
-    for _, cmt in ipairs(comments) do
-      table.insert(lines, render_comment(cmt))
-    end
-    return render_sync_section("comments", table.concat(lines, "\n\n"))
+    local content = comments_md["render-comments"](comments)
+    return render_sync_section("comments", content)
   end
 end
 local function render_local_notes()
@@ -142,14 +123,14 @@ local function render_story_state_badge(story)
 end
 local function render_epic_stats(epic)
   local stats = (epic.stats or {})
-  local function _14_()
+  local function _12_()
     if (stats.num_stories and (stats.num_stories > 0)) then
       return math.floor((((stats.num_stories_done or 0) / stats.num_stories) * 100))
     else
       return 0
     end
   end
-  return string.format("**Progress:** %d/%d stories done (%d%%)", (stats.num_stories_done or 0), (stats.num_stories or 0), _14_())
+  return string.format("**Progress:** %d/%d stories done (%d%%)", (stats.num_stories_done or 0), (stats.num_stories or 0), _12_())
 end
 M["render-epic"] = function(epic, stories)
   local fm_data = build_epic_frontmatter(epic)

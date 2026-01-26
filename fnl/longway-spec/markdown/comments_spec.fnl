@@ -198,6 +198,123 @@
             (let [comments-equal? (. comments-md "comments-equal?")]
               (assert.is_true (comments-equal? [] [])))))))
 
+    (describe "format-timestamp"
+      (fn []
+        (it "formats ISO 8601 timestamp with default format"
+          (fn []
+            (let [format-timestamp (. comments-md "format-timestamp")
+                  result (format-timestamp "2026-01-10T10:30:00Z")]
+              (assert.equals "2026-01-10 10:30" result))))
+
+        (it "formats ISO 8601 timestamp with custom format"
+          (fn []
+            ;; Setup config with custom timestamp_format
+            (t.setup-test-config {:comments {:timestamp_format "%d/%m/%Y %H:%M"
+                                             :max_pull 50
+                                             :show_timestamps true
+                                             :confirm_delete true}})
+            (let [format-timestamp (. comments-md "format-timestamp")
+                  result (format-timestamp "2026-01-10T10:30:00Z")]
+              (assert.equals "10/01/2026 10:30" result))))
+
+        (it "formats ISO 8601 timestamp with date-only format"
+          (fn []
+            (t.setup-test-config {:comments {:timestamp_format "%Y-%m-%d"
+                                             :max_pull 50
+                                             :show_timestamps true
+                                             :confirm_delete true}})
+            (let [format-timestamp (. comments-md "format-timestamp")
+                  result (format-timestamp "2026-01-10T10:30:00Z")]
+              (assert.equals "2026-01-10" result))))
+
+        (it "returns empty string for nil input"
+          (fn []
+            (let [format-timestamp (. comments-md "format-timestamp")
+                  result (format-timestamp nil)]
+              (assert.equals "" result))))
+
+        (it "returns raw string for non-ISO input"
+          (fn []
+            (let [format-timestamp (. comments-md "format-timestamp")
+                  result (format-timestamp "not a timestamp")]
+              (assert.equals "not a timestamp" result))))))
+
+    (describe "format-api-comments"
+      (fn []
+        (it "converts raw API comments to rendering format"
+          (fn []
+            ;; Stub members.resolve-name so it returns the raw ID
+            (let [members (require :longway.api.members)
+                  original-resolve members.resolve-name]
+              (set members.resolve-name (fn [id] id))
+              (let [format-api-comments (. comments-md "format-api-comments")
+                    raw [{:id 101
+                          :text "Hello world"
+                          :author_id "author-uuid-1"
+                          :created_at "2026-01-10T10:30:00Z"}]
+                    result (format-api-comments raw)]
+                (assert.equals 1 (length result))
+                (assert.equals 101 (. result 1 :id))
+                (assert.equals "Hello world" (. result 1 :text))
+                (assert.equals "2026-01-10 10:30" (. result 1 :timestamp))
+                (assert.is_false (. result 1 :is_new))
+                (set members.resolve-name original-resolve)))))
+
+        (it "handles empty input"
+          (fn []
+            (let [format-api-comments (. comments-md "format-api-comments")
+                  result (format-api-comments [])]
+              (assert.equals 0 (length result)))))
+
+        (it "handles nil input"
+          (fn []
+            (let [format-api-comments (. comments-md "format-api-comments")
+                  result (format-api-comments nil)]
+              (assert.equals 0 (length result)))))
+
+        (it "resolves author_id to display name via members cache"
+          (fn []
+            ;; Stub members.resolve-name to return a known value
+            (let [members (require :longway.api.members)
+                  original-resolve members.resolve-name]
+              (set members.resolve-name (fn [id] (if (= id "uuid-alice") "Alice" id)))
+              (let [format-api-comments (. comments-md "format-api-comments")
+                    raw [{:id 1 :text "Test" :author_id "uuid-alice" :created_at "2026-01-10T10:30:00Z"}]
+                    result (format-api-comments raw)]
+                (assert.equals "Alice" (. result 1 :author))
+                ;; Restore original
+                (set members.resolve-name original-resolve)))))
+
+        (it "falls back to raw ID when member not found"
+          (fn []
+            ;; Stub members.resolve-name to return the raw ID (fallback behavior)
+            (let [members (require :longway.api.members)
+                  original-resolve members.resolve-name]
+              (set members.resolve-name (fn [id] id))
+              (let [format-api-comments (. comments-md "format-api-comments")
+                    raw [{:id 1 :text "Test" :author_id "unknown-uuid" :created_at "2026-01-10T10:30:00Z"}]
+                    result (format-api-comments raw)]
+                (assert.equals "unknown-uuid" (. result 1 :author))
+                (set members.resolve-name original-resolve)))))))
+
+    (describe "resolve-author-name"
+      (fn []
+        (it "returns Unknown for nil input"
+          (fn []
+            (let [resolve-author-name (. comments-md "resolve-author-name")
+                  result (resolve-author-name nil)]
+              (assert.equals "Unknown" result))))
+
+        (it "delegates to members.resolve-name for valid ID"
+          (fn []
+            (let [members (require :longway.api.members)
+                  original-resolve members.resolve-name]
+              (set members.resolve-name (fn [id] "Resolved Name"))
+              (let [resolve-author-name (. comments-md "resolve-author-name")
+                    result (resolve-author-name "some-uuid")]
+                (assert.equals "Resolved Name" result)
+                (set members.resolve-name original-resolve)))))))
+
     (describe "round-trip parse-render"
       (fn []
         (it "parsed comment can be re-rendered with same metadata"

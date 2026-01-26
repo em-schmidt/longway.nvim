@@ -82,14 +82,19 @@ M["get-current-user"] = function()
     return nil
   end
 end
-local function format_timestamp(created_at)
+M["format-timestamp"] = function(created_at)
   local cfg = config.get()
   if not created_at then
     return ""
   else
-    local formatted = string.sub(created_at, 1, 16)
-    local result = string.gsub(formatted, "T", " ")
-    return result
+    local year, month, day, hour, min, sec = string.match(created_at, "(%d+)-(%d+)-(%d+)T(%d+):(%d+):(%d+)")
+    if not year then
+      return created_at
+    else
+      local time = os.time({year = tonumber(year), month = tonumber(month), day = tonumber(day), hour = tonumber(hour), min = tonumber(min), sec = tonumber(sec)})
+      local format_str = ((cfg.comments and cfg.comments.timestamp_format) or "%Y-%m-%d %H:%M")
+      return os.date(format_str, time)
+    end
   end
 end
 M["render-comment"] = function(cmt)
@@ -126,7 +131,7 @@ M["format-api-comments"] = function(raw_comments)
   local formatted = {}
   for _, cmt in ipairs((raw_comments or {})) do
     local author_name = M["resolve-author-name"](cmt.author_id)
-    local timestamp = format_timestamp(cmt.created_at)
+    local timestamp = M["format-timestamp"](cmt.created_at)
     table.insert(formatted, {id = cmt.id, author = author_name, timestamp = timestamp, text = (cmt.text or ""), is_new = false})
   end
   return formatted

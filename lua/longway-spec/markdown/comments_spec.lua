@@ -202,6 +202,132 @@ local function _1_()
   describe("comments-equal?", _29_)
   local function _34_()
     local function _35_()
+      local format_timestamp = comments_md["format-timestamp"]
+      local result = format_timestamp("2026-01-10T10:30:00Z")
+      return assert.equals("2026-01-10 10:30", result)
+    end
+    it("formats ISO 8601 timestamp with default format", _35_)
+    local function _36_()
+      t["setup-test-config"]({comments = {timestamp_format = "%d/%m/%Y %H:%M", max_pull = 50, show_timestamps = true, confirm_delete = true}})
+      local format_timestamp = comments_md["format-timestamp"]
+      local result = format_timestamp("2026-01-10T10:30:00Z")
+      return assert.equals("10/01/2026 10:30", result)
+    end
+    it("formats ISO 8601 timestamp with custom format", _36_)
+    local function _37_()
+      t["setup-test-config"]({comments = {timestamp_format = "%Y-%m-%d", max_pull = 50, show_timestamps = true, confirm_delete = true}})
+      local format_timestamp = comments_md["format-timestamp"]
+      local result = format_timestamp("2026-01-10T10:30:00Z")
+      return assert.equals("2026-01-10", result)
+    end
+    it("formats ISO 8601 timestamp with date-only format", _37_)
+    local function _38_()
+      local format_timestamp = comments_md["format-timestamp"]
+      local result = format_timestamp(nil)
+      return assert.equals("", result)
+    end
+    it("returns empty string for nil input", _38_)
+    local function _39_()
+      local format_timestamp = comments_md["format-timestamp"]
+      local result = format_timestamp("not a timestamp")
+      return assert.equals("not a timestamp", result)
+    end
+    return it("returns raw string for non-ISO input", _39_)
+  end
+  describe("format-timestamp", _34_)
+  local function _40_()
+    local function _41_()
+      local members = require("longway.api.members")
+      local original_resolve = members["resolve-name"]
+      local function _42_(id)
+        return id
+      end
+      members["resolve-name"] = _42_
+      local format_api_comments = comments_md["format-api-comments"]
+      local raw = {{id = 101, text = "Hello world", author_id = "author-uuid-1", created_at = "2026-01-10T10:30:00Z"}}
+      local result = format_api_comments(raw)
+      assert.equals(1, #result)
+      assert.equals(101, result[1].id)
+      assert.equals("Hello world", result[1].text)
+      assert.equals("2026-01-10 10:30", result[1].timestamp)
+      assert.is_false(result[1].is_new)
+      members["resolve-name"] = original_resolve
+      return nil
+    end
+    it("converts raw API comments to rendering format", _41_)
+    local function _43_()
+      local format_api_comments = comments_md["format-api-comments"]
+      local result = format_api_comments({})
+      return assert.equals(0, #result)
+    end
+    it("handles empty input", _43_)
+    local function _44_()
+      local format_api_comments = comments_md["format-api-comments"]
+      local result = format_api_comments(nil)
+      return assert.equals(0, #result)
+    end
+    it("handles nil input", _44_)
+    local function _45_()
+      local members = require("longway.api.members")
+      local original_resolve = members["resolve-name"]
+      local function _46_(id)
+        if (id == "uuid-alice") then
+          return "Alice"
+        else
+          return id
+        end
+      end
+      members["resolve-name"] = _46_
+      local format_api_comments = comments_md["format-api-comments"]
+      local raw = {{id = 1, text = "Test", author_id = "uuid-alice", created_at = "2026-01-10T10:30:00Z"}}
+      local result = format_api_comments(raw)
+      assert.equals("Alice", result[1].author)
+      members["resolve-name"] = original_resolve
+      return nil
+    end
+    it("resolves author_id to display name via members cache", _45_)
+    local function _48_()
+      local members = require("longway.api.members")
+      local original_resolve = members["resolve-name"]
+      local function _49_(id)
+        return id
+      end
+      members["resolve-name"] = _49_
+      local format_api_comments = comments_md["format-api-comments"]
+      local raw = {{id = 1, text = "Test", author_id = "unknown-uuid", created_at = "2026-01-10T10:30:00Z"}}
+      local result = format_api_comments(raw)
+      assert.equals("unknown-uuid", result[1].author)
+      members["resolve-name"] = original_resolve
+      return nil
+    end
+    return it("falls back to raw ID when member not found", _48_)
+  end
+  describe("format-api-comments", _40_)
+  local function _50_()
+    local function _51_()
+      local resolve_author_name = comments_md["resolve-author-name"]
+      local result = resolve_author_name(nil)
+      return assert.equals("Unknown", result)
+    end
+    it("returns Unknown for nil input", _51_)
+    local function _52_()
+      local members = require("longway.api.members")
+      local original_resolve = members["resolve-name"]
+      local function _53_(id)
+        return "Resolved Name"
+      end
+      members["resolve-name"] = _53_
+      local resolve_author_name = comments_md["resolve-author-name"]
+      local result = resolve_author_name("some-uuid")
+      assert.equals("Resolved Name", result)
+      members["resolve-name"] = original_resolve
+      return nil
+    end
+    return it("delegates to members.resolve-name for valid ID", _52_)
+  end
+  describe("resolve-author-name", _50_)
+  local function _54_()
+    local function _55_()
       local original_block = "**Author** \194\183 2026-01-10 10:30 <!-- comment:456 -->\n\nSome text here"
       local parsed = comments_md["parse-block"](original_block)
       local rendered = comments_md["render-comment"](parsed)
@@ -209,8 +335,8 @@ local function _1_()
       assert.has_substring(rendered, "**Author**")
       return assert.has_substring(rendered, "Some text here")
     end
-    it("parsed comment can be re-rendered with same metadata", _35_)
-    local function _36_()
+    it("parsed comment can be re-rendered with same metadata", _55_)
+    local function _56_()
       local cmts = {{id = 1, text = "Comment A"}, {id = 2, text = "Comment B"}}
       local hash1 = hash["comments-hash"](cmts)
       local hash2 = hash["comments-hash"](cmts)
@@ -219,8 +345,8 @@ local function _1_()
       local hash3 = hash["comments-hash"](modified)
       return assert.is_not.equals(hash1, hash3)
     end
-    return it("comments hash is stable across render-parse cycles", _36_)
+    return it("comments hash is stable across render-parse cycles", _56_)
   end
-  return describe("round-trip parse-render", _34_)
+  return describe("round-trip parse-render", _54_)
 end
 return describe("longway.markdown.comments", _1_)

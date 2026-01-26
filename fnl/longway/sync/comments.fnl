@@ -86,9 +86,7 @@
               (set cmt.is_new false)
               ;; Update author/timestamp from server response
               (when result.data.created_at
-                (let [formatted (string.sub result.data.created_at 1 16)
-                      timestamp (string.gsub formatted "T" " ")]
-                  (set cmt.timestamp timestamp)))
+                (set cmt.timestamp (comments-md.format-timestamp result.data.created_at)))
               (table.insert result-comments cmt))
             (table.insert errors (string.format "Create comment: %s"
                                                 (or result.error "unknown error"))))))

@@ -89,16 +89,28 @@
 ;;; Comment Rendering
 ;;; ============================================================================
 
-(fn format-timestamp [created-at]
-  "Format an API timestamp for display
+(fn M.format-timestamp [created-at]
+  "Format an API timestamp for display using config.comments.timestamp_format
+   Parses ISO 8601 timestamps and formats via os.date with the configured format string.
    Returns: formatted timestamp string"
   (let [cfg (config.get)]
     (if (not created-at)
         ""
-        ;; Extract date/time from ISO format: YYYY-MM-DDTHH:MM:SS
-        (let [formatted (string.sub created-at 1 16)  ;; YYYY-MM-DDTHH:MM
-              result (string.gsub formatted "T" " ")]
-          result))))
+        ;; Parse ISO 8601: YYYY-MM-DDTHH:MM:SS
+        (let [(year month day hour min sec)
+              (string.match created-at "(%d+)-(%d+)-(%d+)T(%d+):(%d+):(%d+)")]
+          (if (not year)
+              ;; Fallback for non-ISO strings: return as-is
+              created-at
+              (let [time (os.time {:year (tonumber year)
+                                   :month (tonumber month)
+                                   :day (tonumber day)
+                                   :hour (tonumber hour)
+                                   :min (tonumber min)
+                                   :sec (tonumber sec)})
+                    format-str (or (and cfg.comments cfg.comments.timestamp_format)
+                                   "%Y-%m-%d %H:%M")]
+                (os.date format-str time)))))))
 
 (fn M.render-comment [cmt]
   "Render a single comment as markdown
@@ -144,7 +156,7 @@
   (let [formatted []]
     (each [_ cmt (ipairs (or raw-comments []))]
       (let [author-name (M.resolve-author-name cmt.author_id)
-            timestamp (format-timestamp cmt.created_at)]
+            timestamp (M.format-timestamp cmt.created_at)]
         (table.insert formatted
                       {:id cmt.id
                        :author author-name

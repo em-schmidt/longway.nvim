@@ -179,6 +179,86 @@
               (assert.equals 0 (length result.comments))
               (assert.equals 0 (length result.conflicts)))))))
 
+    (describe "pull"
+      (fn []
+        (it "exports pull function"
+          (fn []
+            (assert.is_function comments-sync.pull)))
+
+        (it "formats API comments through format-api-comments"
+          (fn []
+            ;; We can test the pull function by stubbing the API
+            (let [comments-api (require :longway.api.comments)
+                  members (require :longway.api.members)
+                  original-list comments-api.list
+                  original-resolve members.resolve-name]
+              ;; Stub API to return mock data
+              (set comments-api.list
+                   (fn [story-id]
+                     {:ok true
+                      :data [{:id 101
+                              :text "Hello"
+                              :author_id "uuid-1"
+                              :created_at "2026-01-10T10:30:00Z"}
+                             {:id 102
+                              :text "World"
+                              :author_id "uuid-2"
+                              :created_at "2026-01-11T14:00:00Z"}]}))
+              ;; Stub member resolution
+              (set members.resolve-name
+                   (fn [id]
+                     (if (= id "uuid-1") "Alice"
+                         (= id "uuid-2") "Bob"
+                         id)))
+              (let [result (comments-sync.pull 12345)]
+                (assert.is_true result.ok)
+                (assert.equals 2 (length result.comments))
+                (assert.equals "Alice" (. result.comments 1 :author))
+                (assert.equals "Bob" (. result.comments 2 :author))
+                (assert.equals "Hello" (. result.comments 1 :text))
+                (assert.equals "2026-01-10 10:30" (. result.comments 1 :timestamp))
+                (assert.is_false (. result.comments 1 :is_new)))
+              ;; Restore
+              (set comments-api.list original-list)
+              (set members.resolve-name original-resolve))))
+
+        (it "respects max_pull limit"
+          (fn []
+            (t.setup-test-config {:comments {:max_pull 1
+                                             :show_timestamps true
+                                             :timestamp_format "%Y-%m-%d %H:%M"
+                                             :confirm_delete true}})
+            (let [comments-api (require :longway.api.comments)
+                  members (require :longway.api.members)
+                  original-list comments-api.list
+                  original-resolve members.resolve-name]
+              (set comments-api.list
+                   (fn [story-id]
+                     {:ok true
+                      :data [{:id 1 :text "First" :author_id "u1" :created_at "2026-01-10T10:00:00Z"}
+                             {:id 2 :text "Second" :author_id "u2" :created_at "2026-01-11T10:00:00Z"}
+                             {:id 3 :text "Third" :author_id "u3" :created_at "2026-01-12T10:00:00Z"}]}))
+              (set members.resolve-name (fn [id] id))
+              (let [result (comments-sync.pull 12345)]
+                (assert.is_true result.ok)
+                ;; Should only return 1 comment due to max_pull
+                (assert.equals 1 (length result.comments)))
+              (set comments-api.list original-list)
+              (set members.resolve-name original-resolve))))
+
+        (it "returns error when API fails"
+          (fn []
+            (let [comments-api (require :longway.api.comments)
+                  original-list comments-api.list]
+              (set comments-api.list
+                   (fn [story-id]
+                     {:ok false :error "Network error"}))
+              (let [result (comments-sync.pull 12345)]
+                (assert.is_false result.ok)
+                (assert.equals "Network error" result.error)
+                (assert.equals 0 (length result.comments)))
+              (set comments-api.list original-list))))))
+
     (describe "integration: parse-diff round-trip"
       (fn []
         (it "parses markdown, diffs with remote, detects changes"
