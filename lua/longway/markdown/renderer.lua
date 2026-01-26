@@ -1,3 +1,4 @@
+-- [nfnl] fnl/longway/markdown/renderer.fnl
 local config = require("longway.config")
 local frontmatter = require("longway.markdown.frontmatter")
 local hash = require("longway.util.hash")

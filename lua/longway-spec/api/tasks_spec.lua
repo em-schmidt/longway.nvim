@@ -1,3 +1,4 @@
+-- [nfnl] fnl/longway-spec/api/tasks_spec.fnl
 local t = require("longway-spec.init")
 require("longway-spec.assertions")
 local tasks = require("longway.api.tasks")
@@ -36,6 +37,39 @@ local function _1_()
     end
     return it("exports batch-delete function", _10_)
   end
-  return describe("module structure", _3_)
+  describe("module structure", _3_)
+  local function _11_()
+    local function _12_()
+      local batch_create = tasks["batch-create"]
+      local result = batch_create(12345, {})
+      assert.is_true(result.ok)
+      assert.equals(0, #result.created)
+      return assert.equals(0, #result.errors)
+    end
+    return it("returns ok true with empty tasks list", _12_)
+  end
+  describe("batch-create", _11_)
+  local function _13_()
+    local function _14_()
+      local batch_update = tasks["batch-update"]
+      local result = batch_update(12345, {})
+      assert.is_true(result.ok)
+      assert.equals(0, #result.updated)
+      return assert.equals(0, #result.errors)
+    end
+    return it("returns ok true with empty updates list", _14_)
+  end
+  describe("batch-update", _13_)
+  local function _15_()
+    local function _16_()
+      local batch_delete = tasks["batch-delete"]
+      local result = batch_delete(12345, {})
+      assert.is_true(result.ok)
+      assert.equals(0, #result.deleted)
+      return assert.equals(0, #result.errors)
+    end
+    return it("returns ok true with empty task-ids list", _16_)
+  end
+  return describe("batch-delete", _15_)
 end
 return describe("longway.api.tasks", _1_)

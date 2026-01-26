@@ -2,7 +2,7 @@
 local M = {}
 M["setup-test-config"] = function(overrides)
   local config = require("longway.config")
-  local test_config = vim.tbl_deep_extend("force", {workspace_dir = "/tmp/longway-test", stories_subdir = "stories", epics_subdir = "epics", filename_template = "{id}-{slug}", slug_max_length = 50, sync_start_marker = "<!-- BEGIN SHORTCUT SYNC:{section} -->", sync_end_marker = "<!-- END SHORTCUT SYNC:{section} -->", sync_sections = {description = true, tasks = true, comments = true}, tasks = {show_owners = true}, _resolved_token = "test-token"}, (overrides or {}))
+  local test_config = vim.tbl_deep_extend("force", {workspace_dir = "/tmp/longway-test", stories_subdir = "stories", epics_subdir = "epics", filename_template = "{id}-{slug}", slug_max_length = 50, sync_start_marker = "<!-- BEGIN SHORTCUT SYNC:{section} -->", sync_end_marker = "<!-- END SHORTCUT SYNC:{section} -->", sync_sections = {description = true, tasks = true, comments = true}, tasks = {show_owners = true, confirm_delete = true, auto_assign_on_complete = false}, _resolved_token = "test-token"}, (overrides or {}))
   config.setup(test_config)
   return test_config
 end

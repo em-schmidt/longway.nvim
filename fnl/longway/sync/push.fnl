@@ -77,19 +77,33 @@
           {:ok false :error story-result.error}
           ;; Push tasks
           (let [remote-tasks (or story-result.data.tasks [])
-                diff (tasks-sync.diff local-tasks remote-tasks)]
-            ;; Check if we need to confirm deletions
-            (if (and (> (length diff.deleted) 0)
-                     cfg.tasks.confirm_delete
-                     (not opts.skip_confirm))
-                ;; Need to handle async confirmation
-                ;; For now, we'll do sync push without async confirm
-                ;; A real implementation would use callbacks
-                (tasks-sync.push story-id local-tasks remote-tasks
-                                 {:skip_delete false})
-                ;; No confirmation needed or already confirmed
-                (tasks-sync.push story-id local-tasks remote-tasks
-                                 {:skip_delete (or opts.skip_delete false)})))))))
+                diff (tasks-sync.diff local-tasks remote-tasks)
+                has-changes (. tasks-sync "has-changes?")]
+            (if (not (has-changes diff))
+                {:ok true :tasks local-tasks}
+                ;; Check if we need to confirm deletions
+                (if (and (> (length diff.deleted) 0)
+                         cfg.tasks.confirm_delete
+                         (not opts.skip_confirm))
+                    ;; Use synchronous confirmation prompt
+                    (let [delete-count (length diff.deleted)
+                          msg (string.format
+                                "Push will delete %d task%s from Shortcut. Continue?"
+                                delete-count
+                                (if (= delete-count 1) "" "s"))
+                          confirmed (confirm.confirm-sync msg)]
+                      (if confirmed
+                          ;; User confirmed deletion
+                          (tasks-sync.push story-id local-tasks remote-tasks
+                                           {:skip_delete false})
+                          ;; User declined - push without deletions
+                          (do
+                            (notify.info "Skipping task deletions")
+                            (tasks-sync.push story-id local-tasks remote-tasks
+                                             {:skip_delete true}))))
+                    ;; No confirmation needed
+                    (tasks-sync.push story-id local-tasks remote-tasks
+                                     {:skip_delete (or opts.skip_delete false)}))))))))
 
 (fn M.push-story [story-id parsed opts]
   "Push story changes to Shortcut
@@ -115,21 +129,20 @@
     ;; Push tasks if enabled
     (when (and cfg.sync_sections.tasks
                (or opts.sync_tasks (not= opts.sync_tasks false)))
-      (let [local-tasks (or parsed.tasks [])]
-        (when (> (length local-tasks) 0)
-          (let [tasks-result (push-story-tasks story-id local-tasks opts)]
-            (set results.tasks tasks-result)
-            (if tasks-result.ok
-                ;; Update buffer with new task IDs if any were created
-                (when (and tasks-result.tasks (> (length tasks-result.tasks) 0))
-                  (update-buffer-tasks bufnr tasks-result.tasks)
-                  ;; Update tasks_hash in frontmatter
-                  (let [new-hash (hash.tasks-hash tasks-result.tasks)]
-                    (update-buffer-frontmatter bufnr {:tasks_hash new-hash})))
-                ;; Task push failed
-                (table.insert errors (string.format "Tasks: %s"
-                                                    (or tasks-result.error
-                                                        (table.concat (or tasks-result.errors []) ", ")))))))))
+      (let [local-tasks (or parsed.tasks [])
+            tasks-result (push-story-tasks story-id local-tasks opts)]
+        (set results.tasks tasks-result)
+        (if tasks-result.ok
+            ;; Update buffer with new task IDs if any were created
+            (when (and tasks-result.tasks (> (length tasks-result.tasks) 0))
+              (update-buffer-tasks bufnr tasks-result.tasks)
+              ;; Update tasks_hash in frontmatter
+              (let [new-hash (hash.tasks-hash tasks-result.tasks)]
+                (update-buffer-frontmatter bufnr {:tasks_hash new-hash})))
+            ;; Task push failed
+            (table.insert errors (string.format "Tasks: %s"
+                                                (or tasks-result.error
+                                                    (table.concat (or tasks-result.errors []) ", ")))))))
 
     ;; Report results
     (if (= (length errors) 0)

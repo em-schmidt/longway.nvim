@@ -17,7 +17,9 @@
                                           :sync_sections {:description true
                                                           :tasks true
                                                           :comments true}
-                                          :tasks {:show_owners true}
+                                          :tasks {:show_owners true
+                                                          :confirm_delete true
+                                                          :auto_assign_on_complete false}
                                           :_resolved_token "test-token"}
                                          (or overrides {}))]
     (config.setup test-config)

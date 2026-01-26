@@ -10,7 +10,7 @@ M.hello = function()
 end
 M["get-info"] = function()
   local cfg = config.get()
-  return {name = "longway.nvim", version = "0.2.0", author = "Eric Schmidt", configured = config["is-configured"](), workspace_dir = config["get-workspace-dir"](), presets = config["get-presets"](), debug = cfg.debug}
+  return {name = "longway.nvim", version = "0.3.0", author = "Eric Schmidt", configured = config["is-configured"](), workspace_dir = config["get-workspace-dir"](), presets = config["get-presets"](), debug = cfg.debug}
 end
 M.pull = function(story_id)
   if not config["is-configured"]() then
@@ -47,6 +47,51 @@ M["open-in-browser"] = function()
     return notify.error("No shortcut_url found in frontmatter")
   end
 end
+local function print_task_status(parsed, fm)
+  local local_tasks = (parsed.tasks or {})
+  local local_count = #local_tasks
+  local complete_count
+  do
+    local n = 0
+    for _, task in ipairs(local_tasks) do
+      if task.complete then
+        n = (n + 1)
+      else
+        n = n
+      end
+    end
+    complete_count = n
+  end
+  local new_count
+  do
+    local n = 0
+    for _, task in ipairs(local_tasks) do
+      if task.is_new then
+        n = (n + 1)
+      else
+        n = n
+      end
+    end
+    new_count = n
+  end
+  local tasks_hash_stored = (fm.tasks_hash or "")
+  print(string.format("Tasks: %d local (%d complete, %d new)", local_count, complete_count, new_count))
+  if ((#tasks_hash_stored > 0) and (tasks_hash_stored ~= "")) then
+    local hash_mod = require("longway.util.hash")
+    local current_hash = hash_mod["tasks-hash"](local_tasks)
+    local changed = (tasks_hash_stored ~= current_hash)
+    local function _7_()
+      if changed then
+        return " (changed)"
+      else
+        return " (synced)"
+      end
+    end
+    return print(string.format("Tasks hash: %s%s", tasks_hash_stored, _7_()))
+  else
+    return nil
+  end
+end
 M.status = function()
   local bufnr = vim.api.nvim_get_current_buf()
   local filepath = vim.api.nvim_buf_get_name(bufnr)
@@ -73,10 +118,10 @@ M.status = function()
       else
       end
       if fm.local_updated_at then
-        return print(string.format("Local updated: %s", fm.local_updated_at))
+        print(string.format("Local updated: %s", fm.local_updated_at))
       else
-        return nil
       end
+      return print_task_status(parsed, fm)
     end
   end
 end

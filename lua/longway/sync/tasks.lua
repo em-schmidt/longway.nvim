@@ -1,3 +1,4 @@
+-- [nfnl] fnl/longway/sync/tasks.fnl
 local tasks_api = require("longway.api.tasks")
 local tasks_md = require("longway.markdown.tasks")
 local config = require("longway.config")

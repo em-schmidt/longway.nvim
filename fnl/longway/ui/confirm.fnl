@@ -14,10 +14,14 @@
       (callback (= choice "Yes")))))
 
 (fn M.confirm-sync [message callback]
-  "Show a confirmation prompt with sync-style messaging
-   Wraps vim.fn.confirm for synchronous confirmation"
-  (let [result (vim.fn.confirm message "Yes\nNo" 2)]
-    (callback (= result 1))))
+  "Show a synchronous confirmation prompt
+   Wraps vim.fn.confirm. If callback is provided, calls it with the result.
+   Always returns true/false directly."
+  (let [result (vim.fn.confirm message "&Yes\n&No" 2)
+        confirmed (= result 1)]
+    (when callback
+      (callback confirmed))
+    confirmed))
 
 (fn format-task-list [tasks]
   "Format a list of tasks for display"
