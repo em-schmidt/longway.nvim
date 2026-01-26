@@ -34,27 +34,6 @@
    Returns: {:ok bool :data [stories] :error string}"
   (client.get (string.format "/epics/%s/stories" (tostring epic-id))))
 
-;; Task-related functions (for Phase 3, but included here for completeness)
-
-(fn M.create-task [story-id task-data]
-  "Create a task on a story
-   task-data: {:description string :complete bool :owner_ids [uuids]}
-   Returns: {:ok bool :data task :error string}"
-  (client.post (string.format "/stories/%s/tasks" (tostring story-id))
-               {:body task-data}))
-
-(fn M.update-task [story-id task-id task-data]
-  "Update a task on a story
-   task-data: {:complete bool :description string}
-   Returns: {:ok bool :data task :error string}"
-  (client.put (string.format "/stories/%s/tasks/%s" (tostring story-id) (tostring task-id))
-              {:body task-data}))
-
-(fn M.delete-task [story-id task-id]
-  "Delete a task from a story
-   Returns: {:ok bool :error string}"
-  (client.delete (string.format "/stories/%s/tasks/%s" (tostring story-id) (tostring task-id))))
-
 ;; Comment-related functions (for Phase 4, but included here for completeness)
 
 (fn M.list-comments [story-id]

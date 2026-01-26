@@ -165,6 +165,24 @@ M["render-section"] = function(tasks)
   local content = M["render-tasks"](tasks)
   return (start_marker .. "\n" .. content .. "\n" .. end_marker)
 end
+M["format-api-tasks"] = function(raw_tasks)
+  local formatted = {}
+  for i, task in ipairs((raw_tasks or {})) do
+    local owner_mention
+    if (task.owner_ids and (#task.owner_ids > 0)) then
+      local owner_name = M["resolve-owner-id"](task.owner_ids[1])
+      if owner_name then
+        owner_mention = string.gsub(owner_name, " ", "_")
+      else
+        owner_mention = nil
+      end
+    else
+      owner_mention = nil
+    end
+    table.insert(formatted, {id = task.id, description = task.description, complete = task.complete, owner_ids = (task.owner_ids or {}), owner_mention = owner_mention, position = (task.position or i), is_new = false})
+  end
+  return formatted
+end
 M["task-changed?"] = function(local_task, remote_task)
   if (local_task.complete ~= remote_task.complete) then
     return true

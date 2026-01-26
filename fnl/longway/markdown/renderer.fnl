@@ -63,29 +63,11 @@
   (let [desc (or description "")]
     (render-sync-section "description" desc)))
 
-(fn format-tasks-for-render [tasks]
-  "Convert API task format to rendering format with owner resolution"
-  (let [formatted []]
-    (each [i task (ipairs (or tasks []))]
-      ;; Resolve owner IDs to mention names
-      (let [owner-mention (when (and task.owner_ids (> (length task.owner_ids) 0))
-                            (tasks-md.resolve-owner-id (. task.owner_ids 1)))]
-        (table.insert formatted
-                      {:id task.id
-                       :description task.description
-                       :complete task.complete
-                       :is_new false
-                       :owner_ids (or task.owner_ids [])
-                       :owner_mention (when owner-mention
-                                        (string.gsub owner-mention " " "_"))
-                       :position (or task.position i)})))
-    formatted))
-
 (fn render-tasks [tasks]
   "Render tasks section"
   (if (or (not tasks) (= (length tasks) 0))
       (render-sync-section "tasks" "")
-      (let [formatted (format-tasks-for-render tasks)
+      (let [formatted (tasks-md.format-api-tasks tasks)
             content (tasks-md.render-tasks formatted)]
         (render-sync-section "tasks" content))))
 

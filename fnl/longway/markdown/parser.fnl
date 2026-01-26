@@ -3,6 +3,7 @@
 
 (local config (require :longway.config))
 (local frontmatter (require :longway.markdown.frontmatter))
+(local tasks-md (require :longway.markdown.tasks))
 
 (local M {})
 
@@ -27,40 +28,12 @@
   "Extract the description from sync markers"
   (extract-sync-section content "description"))
 
-(fn parse-task-line [line]
-  "Parse a task line into structured data"
-  ;; Format: - [x] Task description <!-- task:123 @owner complete:true -->
-  (let [checkbox-pattern "^%s*%-%s*%[([x ])%]%s*(.+)$"
-        (checkbox rest) (string.match line checkbox-pattern)]
-    (when checkbox
-      (let [complete (= checkbox "x")
-            ;; Extract metadata comment
-            metadata-pattern "(.-)%s*<!%-%-%s*task:(%S+)%s*(.-)%s*complete:(%S+)%s*%-%->"
-            (description id extras complete-str) (string.match rest metadata-pattern)]
-        (if description
-            {:description (string.gsub description "%s+$" "")
-             :id (if (= id "new") nil (tonumber id))
-             :complete complete
-             :is_new (= id "new")
-             :owner_mention (string.match extras "@(%S+)")}
-            ;; No metadata - might be a new task without proper format
-            {:description (string.gsub rest "%s+$" "")
-             :id nil
-             :complete complete
-             :is_new true
-             :owner_mention nil})))))
-
 (fn M.extract-tasks [content]
   "Extract tasks from the tasks sync section"
   (let [tasks-content (extract-sync-section content "tasks")]
     (if (not tasks-content)
         []
-        (let [tasks []]
-          (each [line (string.gmatch tasks-content "[^\n]+")]
-            (let [task (parse-task-line line)]
-              (when task
-                (table.insert tasks task))))
-          tasks))))
+        (tasks-md.parse-section tasks-content))))
 
 (fn parse-comment-block [block]
   "Parse a comment block into structured data"

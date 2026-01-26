@@ -175,6 +175,30 @@
     (.. start-marker "\n" content "\n" end-marker)))
 
 ;;; ============================================================================
+;;; API Task Formatting
+;;; ============================================================================
+
+(fn M.format-api-tasks [raw-tasks]
+  "Convert raw API tasks to rendering-ready format with owner resolution
+   raw-tasks: [{:id :description :complete :owner_ids :position}]
+   Returns: [{:id :description :complete :is_new :owner_ids :owner_mention :position}]"
+  (let [formatted []]
+    (each [i task (ipairs (or raw-tasks []))]
+      (let [owner-mention (when (and task.owner_ids (> (length task.owner_ids) 0))
+                            (let [owner-name (M.resolve-owner-id (. task.owner_ids 1))]
+                              (when owner-name
+                                (string.gsub owner-name " " "_"))))]
+        (table.insert formatted
+                      {:id task.id
+                       :description task.description
+                       :complete task.complete
+                       :is_new false
+                       :owner_ids (or task.owner_ids [])
+                       :owner_mention owner-mention
+                       :position (or task.position i)})))
+    formatted))
+
+;;; ============================================================================
 ;;; Task Comparison Utilities
 ;;; ============================================================================
 

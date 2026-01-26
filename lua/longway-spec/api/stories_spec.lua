@@ -44,45 +44,24 @@ local function _1_()
   describe("list-for-epic", _11_)
   local function _13_()
     local function _14_()
-      return assert.is_function(stories["create-task"])
+      return assert.is_function(stories["list-comments"])
     end
     return it("is a function", _14_)
   end
-  describe("create-task", _13_)
+  describe("list-comments", _13_)
   local function _15_()
     local function _16_()
-      return assert.is_function(stories["update-task"])
+      return assert.is_function(stories["create-comment"])
     end
     return it("is a function", _16_)
   end
-  describe("update-task", _15_)
+  describe("create-comment", _15_)
   local function _17_()
     local function _18_()
-      return assert.is_function(stories["delete-task"])
+      return assert.is_function(stories["delete-comment"])
     end
     return it("is a function", _18_)
   end
-  describe("delete-task", _17_)
-  local function _19_()
-    local function _20_()
-      return assert.is_function(stories["list-comments"])
-    end
-    return it("is a function", _20_)
-  end
-  describe("list-comments", _19_)
-  local function _21_()
-    local function _22_()
-      return assert.is_function(stories["create-comment"])
-    end
-    return it("is a function", _22_)
-  end
-  describe("create-comment", _21_)
-  local function _23_()
-    local function _24_()
-      return assert.is_function(stories["delete-comment"])
-    end
-    return it("is a function", _24_)
-  end
-  return describe("delete-comment", _23_)
+  return describe("delete-comment", _17_)
 end
 return describe("longway.api.stories", _1_)

@@ -45,24 +45,6 @@
           (fn []
             (assert.is_function (. stories "list-for-epic"))))))
 
-    (describe "create-task"
-      (fn []
-        (it "is a function"
-          (fn []
-            (assert.is_function (. stories "create-task"))))))
-
-    (describe "update-task"
-      (fn []
-        (it "is a function"
-          (fn []
-            (assert.is_function (. stories "update-task"))))))
-
-    (describe "delete-task"
-      (fn []
-        (it "is a function"
-          (fn []
-            (assert.is_function (. stories "delete-task"))))))
-
     (describe "list-comments"
       (fn []
         (it "is a function"
