@@ -34,22 +34,21 @@
    Returns: {:ok bool :data [stories] :error string}"
   (client.get (string.format "/epics/%s/stories" (tostring epic-id))))
 
-;; Comment-related functions (for Phase 4, but included here for completeness)
+;; Comment operations are in longway.api.comments
+;; These thin wrappers kept for backwards compatibility
+
+(local comments-api (require :longway.api.comments))
 
 (fn M.list-comments [story-id]
-  "List comments on a story
-   Returns: {:ok bool :data [comments] :error string}"
-  (client.get (string.format "/stories/%s/comments" (tostring story-id))))
+  "List comments on a story (delegates to api.comments)"
+  (comments-api.list story-id))
 
 (fn M.create-comment [story-id text]
-  "Create a comment on a story
-   Returns: {:ok bool :data comment :error string}"
-  (client.post (string.format "/stories/%s/comments" (tostring story-id))
-               {:body {:text text}}))
+  "Create a comment on a story (delegates to api.comments)"
+  (comments-api.create story-id {:text text}))
 
 (fn M.delete-comment [story-id comment-id]
-  "Delete a comment from a story
-   Returns: {:ok bool :error string}"
-  (client.delete (string.format "/stories/%s/comments/%s" (tostring story-id) (tostring comment-id))))
+  "Delete a comment from a story (delegates to api.comments)"
+  (comments-api.delete story-id comment-id))
 
 M

@@ -16,7 +16,7 @@
   "Get plugin information"
   (let [cfg (config.get)]
     {:name "longway.nvim"
-     :version "0.3.0"
+     :version "0.4.0"
      :author "Eric Schmidt"
      :configured (config.is-configured)
      :workspace_dir (config.get-workspace-dir)
@@ -97,7 +97,25 @@
                   (print (string.format "Last updated: %s" fm.updated_at)))
                 (when fm.local_updated_at
                   (print (string.format "Local updated: %s" fm.local_updated_at)))
-                (print-task-status parsed fm)))))))
+                (print-task-status parsed fm)
+                (print-comment-status parsed fm)))))))
+
+(fn print-comment-status [parsed fm]
+  "Print comment sync status info"
+  (let [local-comments (or parsed.comments [])
+        local-count (length local-comments)
+        new-count (accumulate [n 0 _ cmt (ipairs local-comments)]
+                    (if cmt.is_new (+ n 1) n))
+        comments-hash-stored (or fm.comments_hash "")]
+    (print (string.format "Comments: %d local (%d new)"
+                          local-count new-count))
+    (when (> (length comments-hash-stored) 0)
+      (let [hash-mod (require :longway.util.hash)
+            current-hash (hash-mod.comments-hash local-comments)
+            changed (not= comments-hash-stored current-hash)]
+        (print (string.format "Comments hash: %s%s"
+                              comments-hash-stored
+                              (if changed " (changed)" " (synced)")))))))
 
 ;; Phase 2: Sync and filtering functions
 

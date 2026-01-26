@@ -1,8 +1,10 @@
 -- [nfnl] fnl/longway/sync/pull.fnl
 local config = require("longway.config")
 local stories_api = require("longway.api.stories")
+local comments_api = require("longway.api.comments")
 local epics_api = require("longway.api.epics")
 local search_api = require("longway.api.search")
+local comments_md = require("longway.markdown.comments")
 local renderer = require("longway.markdown.renderer")
 local slug = require("longway.util.slug")
 local notify = require("longway.ui.notify")
@@ -25,6 +27,32 @@ local function write_file(path, content)
     return nil
   end
 end
+local function fetch_story_comments(story)
+  do
+    local cfg = config.get()
+    if cfg.sync_sections.comments then
+      local result = comments_api.list(story.id)
+      if result.ok then
+        local raw_comments = (result.data or {})
+        local limited
+        if (cfg.comments.max_pull and (#raw_comments > cfg.comments.max_pull)) then
+          local trimmed = {}
+          for i = 1, cfg.comments.max_pull do
+            table.insert(trimmed, raw_comments[i])
+          end
+          limited = trimmed
+        else
+          limited = raw_comments
+        end
+        local formatted = comments_md["format-api-comments"](limited)
+        story.comments = formatted
+      else
+      end
+    else
+    end
+  end
+  return story
+end
 M["pull-story"] = function(story_id)
   notify["pull-started"](story_id)
   local result = stories_api.get(story_id)
@@ -32,7 +60,7 @@ M["pull-story"] = function(story_id)
     notify["api-error"](result.error, result.status)
     return {error = result.error, ok = false}
   else
-    local story = result.data
+    local story = fetch_story_comments(result.data)
     local stories_dir = config["get-stories-dir"]()
     local filename = slug["make-filename"](story.id, story.name, "story")
     local filepath = (stories_dir .. "/" .. filename)
@@ -91,7 +119,7 @@ M["refresh-current-buffer"] = function()
           notify["api-error"](result.error, result.status)
           return {error = result.error, ok = false}
         else
-          local story = result.data
+          local story = fetch_story_comments(result.data)
           local markdown = renderer["render-story"](story)
           local lines = vim.split(markdown, "\n", {plain = true})
           vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)

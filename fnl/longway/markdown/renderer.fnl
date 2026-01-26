@@ -47,6 +47,7 @@
     ;; Sync hashes (computed after rendering)
     (set fm.sync_hash "")
     (set fm.tasks_hash "")
+    (set fm.comments_hash "")
     (set fm.local_updated_at (os.date "!%Y-%m-%dT%H:%M:%SZ"))
 
     fm))
@@ -137,6 +138,7 @@
       ;; Compute sync hashes
       (set fm-data.sync_hash (hash.content-hash (or story.description "")))
       (set fm-data.tasks_hash (hash.tasks-hash (or story.tasks [])))
+      (set fm-data.comments_hash (hash.comments-hash (or story.comments [])))
       ;; Return with updated frontmatter
       (.. (frontmatter.generate fm-data) "\n\n" body))))
 

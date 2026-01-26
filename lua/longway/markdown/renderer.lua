@@ -42,6 +42,7 @@ local function build_story_frontmatter(story)
   end
   fm.sync_hash = ""
   fm.tasks_hash = ""
+  fm.comments_hash = ""
   fm.local_updated_at = os.date("!%Y-%m-%dT%H:%M:%SZ")
   return fm
 end
@@ -114,6 +115,7 @@ M["render-story"] = function(story)
   local full_content = (frontmatter.generate(fm_data) .. "\n\n" .. body)
   fm_data.sync_hash = hash["content-hash"]((story.description or ""))
   fm_data.tasks_hash = hash["tasks-hash"]((story.tasks or {}))
+  fm_data.comments_hash = hash["comments-hash"]((story.comments or {}))
   return (frontmatter.generate(fm_data) .. "\n\n" .. body)
 end
 local function build_epic_frontmatter(epic)

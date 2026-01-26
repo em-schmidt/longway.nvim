@@ -88,4 +88,44 @@
             (callback "skip")
             (callback nil))))))
 
+(fn format-comment-list [comments]
+  "Format a list of comments for display"
+  (let [lines []]
+    (each [i cmt (ipairs comments)]
+      (when (<= i 5)  ;; Show max 5 comments
+        (let [text (or cmt.text "")
+              preview (if (> (length text) 40)
+                         (.. (string.sub text 1 37) "...")
+                         (if (= (length text) 0) "(empty comment)" text))
+              author (or cmt.author "Unknown")]
+          (table.insert lines (string.format "  • %s: %s" author preview)))))
+    (when (> (length comments) 5)
+      (table.insert lines (string.format "  ... and %d more" (- (length comments) 5))))
+    (table.concat lines "\n")))
+
+(fn M.confirm-delete-comments [comments callback]
+  "Confirm deletion of comments
+   comments: List of comments to delete (with text and author)
+   callback: Function called with true/false"
+  (let [count (length comments)
+        comment-list (format-comment-list comments)
+        message (string.format "Delete %d comment(s)?\n\n%s\n\nThis cannot be undone."
+                               count comment-list)]
+    (M.confirm message callback)))
+
+(fn M.confirm-delete-comment-ids [comment-ids remote-comments callback]
+  "Confirm deletion of comments by ID, looking up text from remote
+   comment-ids: List of comment IDs to delete
+   remote-comments: Remote comment list for looking up text
+   callback: Function called with true/false"
+  (let [comments-to-delete []]
+    ;; Find comment text
+    (each [_ id (ipairs comment-ids)]
+      (var found nil)
+      (each [_ cmt (ipairs (or remote-comments [])) &until found]
+        (when (= cmt.id id)
+          (set found cmt)))
+      (table.insert comments-to-delete (or found {:id id :text (string.format "Comment #%s" id) :author "Unknown"})))
+    (M.confirm-delete-comments comments-to-delete callback)))
+
 M
