@@ -12,6 +12,7 @@
 (local confirm (require :longway.ui.confirm))
 (local hash (require :longway.util.hash))
 (local frontmatter (require :longway.markdown.frontmatter))
+(local diff (require :longway.sync.diff))
 
 (local M {})
 
@@ -175,15 +176,63 @@
                     (tasks-sync.push story-id local-tasks remote-tasks
                                      {:skip_delete (or opts.skip_delete false)}))))))))
 
+(fn check-remote-before-push [story-id parsed]
+  "Check if remote has changed since last sync.
+   Returns: {:ok bool :conflict bool :classification table :error string}"
+  (let [first-sync? (. diff "first-sync?")]
+    ;; Skip check on first sync (no stored hashes yet)
+    (if (first-sync? parsed.frontmatter)
+        {:ok true :conflict false}
+        ;; Fetch remote story to check updated_at
+        (let [remote-result (stories-api.get story-id)]
+          (if (not remote-result.ok)
+              {:ok false :error remote-result.error}
+              (let [classification (diff.classify parsed remote-result.data.updated_at)]
+                {:ok true
+                 :conflict (= classification.status :conflict)
+                 :classification classification
+                 :remote-story remote-result.data}))))))
+
 (fn M.push-story [story-id parsed opts]
   "Push story changes to Shortcut
    story-id: The Shortcut story ID
    parsed: Parsed markdown content
-   opts: {:sync_tasks bool :skip_confirm bool :bufnr number}
-   Returns: {:ok bool :error string}"
+   opts: {:sync_tasks bool :skip_confirm bool :bufnr number :force bool}
+   Returns: {:ok bool :error string :conflict bool}"
   (let [opts (or opts {})
         cfg (config.get)
-        bufnr (or opts.bufnr (vim.api.nvim_get_current_buf))
+        bufnr (or opts.bufnr (vim.api.nvim_get_current_buf))]
+
+    ;; Pre-push conflict check (skip if forced or first sync)
+    (if (and (not opts.force)
+             (not (let [first-sync? (. diff "first-sync?")]
+                    (first-sync? parsed.frontmatter))))
+        ;; Check remote before proceeding
+        (let [check-result (check-remote-before-push story-id parsed)]
+          (if (not check-result.ok)
+              {:ok false :error check-result.error}
+              (if check-result.conflict
+                  ;; Conflict detected — record in frontmatter and notify
+                  (let [classification check-result.classification
+                        changed-sections []]
+                    (when classification.local_changes.description
+                      (table.insert changed-sections "description"))
+                    (when classification.local_changes.tasks
+                      (table.insert changed-sections "tasks"))
+                    (when classification.local_changes.comments
+                      (table.insert changed-sections "comments"))
+                    (update-buffer-frontmatter bufnr {:conflict_sections changed-sections})
+                    (notify.conflict-detected story-id)
+                    {:ok false :conflict true :sections changed-sections})
+                  ;; No conflict — proceed with push
+                  (M.do-push story-id parsed opts bufnr))))
+        ;; Forced push or first sync — proceed directly
+        (M.do-push story-id parsed opts bufnr))))
+
+(fn M.do-push [story-id parsed opts bufnr]
+  "Execute the actual push to Shortcut (after conflict check has passed).
+   Returns: {:ok bool :error string}"
+  (let [cfg (config.get)
         errors []
         results {}]
 
@@ -236,9 +285,18 @@
                                                 (or comments-result.error
                                                     (table.concat (or comments-result.errors []) ", ")))))))
 
-    ;; Report results
+    ;; Report results and update sync state
     (if (= (length errors) 0)
         (do
+          ;; Update sync_hash and updated_at in frontmatter after successful push
+          (let [content-hash (. hash "content-hash")
+                fm-update {:sync_hash (content-hash (or parsed.description ""))}]
+            ;; Capture the remote updated_at from the description push response
+            (when (and results.description results.description.story)
+              (tset fm-update :updated_at results.description.story.updated_at))
+            ;; Clear any conflict state
+            (tset fm-update :conflict_sections nil)
+            (update-buffer-frontmatter bufnr fm-update))
           (notify.push-completed)
           {:ok true :results results})
         (do

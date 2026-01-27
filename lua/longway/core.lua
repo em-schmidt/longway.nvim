@@ -10,7 +10,7 @@ M.hello = function()
 end
 M["get-info"] = function()
   local cfg = config.get()
-  return {name = "longway.nvim", version = "0.4.0", author = "Eric Schmidt", configured = config["is-configured"](), workspace_dir = config["get-workspace-dir"](), presets = config["get-presets"](), debug = cfg.debug}
+  return {name = "longway.nvim", version = "0.5.0", author = "Eric Schmidt", configured = config["is-configured"](), workspace_dir = config["get-workspace-dir"](), presets = config["get-presets"](), debug = cfg.debug}
 end
 M.pull = function(story_id)
   if not config["is-configured"]() then
@@ -125,6 +125,39 @@ local function print_comment_status(parsed, fm)
     return nil
   end
 end
+local function print_description_status(parsed, fm)
+  local sync_hash_stored = (fm.sync_hash or "")
+  if (#sync_hash_stored > 0) then
+    local hash_mod = require("longway.util.hash")
+    local content_hash = hash_mod["content-hash"]
+    local current_hash = content_hash((parsed.description or ""))
+    local changed = (sync_hash_stored ~= current_hash)
+    local function _12_()
+      if changed then
+        return "changed"
+      else
+        return "synced"
+      end
+    end
+    return print(string.format("Description: %s", _12_()))
+  else
+    return nil
+  end
+end
+local function print_conflict_status(fm)
+  if fm.conflict_sections then
+    local sections
+    if (type(fm.conflict_sections) == "table") then
+      sections = table.concat(fm.conflict_sections, ", ")
+    else
+      sections = tostring(fm.conflict_sections)
+    end
+    print(string.format("CONFLICT in: %s", sections))
+    return print("  Resolve with: :LongwayResolve <local|remote|manual>")
+  else
+    return nil
+  end
+end
 M.status = function()
   local bufnr = vim.api.nvim_get_current_buf()
   local filepath = vim.api.nvim_buf_get_name(bufnr)
@@ -154,8 +187,10 @@ M.status = function()
         print(string.format("Local updated: %s", fm.local_updated_at))
       else
       end
+      print_description_status(parsed, fm)
       print_task_status(parsed, fm)
-      return print_comment_status(parsed, fm)
+      print_comment_status(parsed, fm)
+      return print_conflict_status(fm)
     end
   end
 end
@@ -292,6 +327,14 @@ M["list-presets"] = function()
       end
     end
     return nil
+  end
+end
+M.resolve = function(strategy)
+  if not config["is-configured"]() then
+    return notify["no-token"]()
+  else
+    local resolve_mod = require("longway.sync.resolve")
+    return resolve_mod.resolve(strategy, {})
   end
 end
 return M

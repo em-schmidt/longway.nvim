@@ -19,7 +19,12 @@
   (when (. (config.get) :debug)
     (print "longway.nvim initialized")
     (print (string.format "  Workspace: %s" (config.get-workspace-dir)))
-    (print (string.format "  Token configured: %s" (tostring (config.is-configured))))))
+    (print (string.format "  Token configured: %s" (tostring (config.is-configured)))))
+
+  ;; Phase 5: Setup auto-push on save if enabled
+  (when (. (config.get) :auto_push_on_save)
+    (let [auto (require :longway.sync.auto)]
+      (auto.setup))))
 
 ;; Expose core functions (Phase 1)
 (set M.pull core.pull)
@@ -44,6 +49,9 @@
 (set M.cache_status core.cache-status)
 (set M.list_presets core.list-presets)
 (set M.get_info core.get-info)
+
+;; Expose core functions (Phase 5)
+(set M.resolve core.resolve)
 
 ;; Expose config functions
 (set M.get-config config.get)

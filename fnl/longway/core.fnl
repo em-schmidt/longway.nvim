@@ -16,7 +16,7 @@
   "Get plugin information"
   (let [cfg (config.get)]
     {:name "longway.nvim"
-     :version "0.4.0"
+     :version "0.5.0"
      :author "Eric Schmidt"
      :configured (config.is-configured)
      :workspace_dir (config.get-workspace-dir)
@@ -91,6 +91,26 @@
                               comments-hash-stored
                               (if changed " (changed)" " (synced)")))))))
 
+(fn print-description-status [parsed fm]
+  "Print description sync status info"
+  (let [sync-hash-stored (or fm.sync_hash "")]
+    (when (> (length sync-hash-stored) 0)
+      (let [hash-mod (require :longway.util.hash)
+            content-hash (. hash-mod "content-hash")
+            current-hash (content-hash (or parsed.description ""))
+            changed (not= sync-hash-stored current-hash)]
+        (print (string.format "Description: %s"
+                              (if changed "changed" "synced")))))))
+
+(fn print-conflict-status [fm]
+  "Print conflict status if any conflicts exist"
+  (when fm.conflict_sections
+    (let [sections (if (= (type fm.conflict_sections) "table")
+                       (table.concat fm.conflict_sections ", ")
+                       (tostring fm.conflict_sections))]
+      (print (string.format "CONFLICT in: %s" sections))
+      (print "  Resolve with: :LongwayResolve <local|remote|manual>"))))
+
 (fn M.status []
   "Show sync status of current file"
   (let [bufnr (vim.api.nvim_get_current_buf)
@@ -114,8 +134,10 @@
                   (print (string.format "Last updated: %s" fm.updated_at)))
                 (when fm.local_updated_at
                   (print (string.format "Local updated: %s" fm.local_updated_at)))
+                (print-description-status parsed fm)
                 (print-task-status parsed fm)
-                (print-comment-status parsed fm)))))))
+                (print-comment-status parsed fm)
+                (print-conflict-status fm)))))))
 
 ;; Phase 2: Sync and filtering functions
 
@@ -217,5 +239,15 @@
                 (print (string.format "    query: %s" preset.query)))
               (when preset.description
                 (print (string.format "    desc: %s" preset.description)))))))))
+
+;; Phase 5: Conflict resolution
+
+(fn M.resolve [strategy]
+  "Resolve a sync conflict using the given strategy.
+   strategy: 'local' | 'remote' | 'manual'"
+  (if (not (config.is-configured))
+      (notify.no-token)
+      (let [resolve-mod (require :longway.sync.resolve)]
+        (resolve-mod.resolve strategy {}))))
 
 M

@@ -13,13 +13,13 @@ local function parse_comment_metadata(header_line)
   local pattern = "%*%*(.-)%*%*%s*\194\183%s*([%d%-]+%s*[%d:]+)%s*<!%-%-[%s]*comment:(%S+)%s*%-%->"
   local author, timestamp, id = string.match(header_line, pattern)
   if author then
-    local _1_
+    local _2_
     if (id == "new") then
-      _1_ = nil
+      _2_ = nil
     else
-      _1_ = tonumber(id)
+      _2_ = tonumber(id)
     end
-    return {author = author, timestamp = timestamp, id = _1_, is_new = (id == "new")}
+    return {author = author, timestamp = timestamp, id = _2_, is_new = (id == "new")}
   else
     return nil
   end
