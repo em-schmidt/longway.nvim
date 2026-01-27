@@ -1,4 +1,4 @@
--- [nfnl] Compiled from fnl/longway/ui/picker.fnl by https://github.com/Olical/nfnl, do not edit.
+-- [nfnl] fnl/longway/ui/picker.fnl
 local config = require("longway.config")
 local notify = require("longway.ui.notify")
 local M = {}
@@ -102,13 +102,19 @@ M["pick-stories"] = function(opts)
           owner_names = table.concat(names, ", ")
         end
         local text = string.format("%s %s [%s] @%s", tostring(story.id), (story.name or ""), state, owner_names)
-        table.insert(items, {text = text, idx = i, id = story.id, name = (story.name or ""), state = state, story_type = (story.story_type or ""), owners = owner_names, estimate = story.estimate, file = file, preview = {text = (story.description or "No description"), ft = "markdown"}})
+        local _18_
+        if file then
+          _18_ = "file"
+        else
+          _18_ = {text = (story.description or "No description"), ft = "markdown"}
+        end
+        table.insert(items, {text = text, idx = i, id = story.id, name = (story.name or ""), state = state, story_type = (story.story_type or ""), owners = owner_names, estimate = story.estimate, file = file, preview = _18_})
       end
     else
     end
     return items
   end
-  local function _19_(item, picker)
+  local function _21_(item, picker)
     local ret = {}
     table.insert(ret, {tostring((item.id or "")), "Number"})
     table.insert(ret, {" ", {virtual = true}})
@@ -124,7 +130,7 @@ M["pick-stories"] = function(opts)
     end
     return ret
   end
-  local function _22_(picker, item)
+  local function _24_(picker, item)
     picker:close()
     if item then
       if item.file then
@@ -137,12 +143,12 @@ M["pick-stories"] = function(opts)
       return nil
     end
   end
-  return Snacks.picker({source = "longway_stories", title = "Longway Stories", layout = M["build-picker-layout"](), finder = _16_, format = _19_, confirm = _22_})
+  return Snacks.picker({source = "longway_stories", title = "Longway Stories", layout = M["build-picker-layout"](), preview = "preview", finder = _16_, format = _21_, confirm = _24_})
 end
 M["pick-epics"] = function(opts)
   local Snacks = require("snacks")
   local epics_api = require("longway.api.epics")
-  local function _25_(finder_opts, ctx)
+  local function _27_(finder_opts, ctx)
     local result = epics_api.list()
     local items = {}
     if result.ok then
@@ -152,14 +158,57 @@ M["pick-epics"] = function(opts)
         local stats = (epic.stats or {})
         local done = (stats.num_stories_done or 0)
         local total_stories = (stats.num_stories or 0)
+        local started = (stats.num_stories_started or 0)
+        local unstarted = (stats.num_stories_unstarted or 0)
+        local points_done = (stats.num_points_done or 0)
+        local points_total = (stats.num_points or 0)
+        local label_names
+        do
+          local names = {}
+          for _, lbl in ipairs((epic.labels or {})) do
+            table.insert(names, (lbl.name or ""))
+          end
+          label_names = table.concat(names, ", ")
+        end
+        local preview_text
+        if epic.description then
+          preview_text = epic.description
+        else
+          local _28_
+          if (epic.planned_start_date and (epic.planned_start_date ~= vim.NIL)) then
+            _28_ = ("\n**Start:** " .. epic.planned_start_date)
+          else
+            _28_ = ""
+          end
+          local _30_
+          if (epic.deadline and (epic.deadline ~= vim.NIL)) then
+            _30_ = ("\n**Deadline:** " .. epic.deadline)
+          else
+            _30_ = ""
+          end
+          local function _32_()
+            if (#label_names > 0) then
+              return ("\n**Labels:** " .. label_names)
+            else
+              return ""
+            end
+          end
+          preview_text = string.format("# %s\n\n**State:** %s\n**Stories:** %d/%d done (%d started, %d unstarted)\n**Points:** %d/%d%s%s%s", (epic.name or ""), state, done, total_stories, started, unstarted, points_done, points_total, _28_, _30_, _32_())
+        end
         local text = string.format("%s %s [%s] (%d/%d stories)", tostring(epic.id), (epic.name or ""), state, done, total_stories)
-        table.insert(items, {text = text, idx = i, id = epic.id, name = (epic.name or ""), state = state, done = done, total_stories = total_stories, file = file, preview = {text = (epic.description or "No description"), ft = "markdown"}})
+        local _34_
+        if file then
+          _34_ = "file"
+        else
+          _34_ = {text = preview_text, ft = "markdown"}
+        end
+        table.insert(items, {text = text, idx = i, id = epic.id, name = (epic.name or ""), state = state, done = done, total_stories = total_stories, file = file, preview = _34_})
       end
     else
     end
     return items
   end
-  local function _27_(item, picker)
+  local function _37_(item, picker)
     local ret = {}
     table.insert(ret, {tostring((item.id or "")), "Number"})
     table.insert(ret, {" ", {virtual = true}})
@@ -172,7 +221,7 @@ M["pick-epics"] = function(opts)
     end
     return ret
   end
-  local function _29_(picker, item)
+  local function _39_(picker, item)
     picker:close()
     if item then
       if item.file then
@@ -185,7 +234,7 @@ M["pick-epics"] = function(opts)
       return nil
     end
   end
-  return Snacks.picker({source = "longway_epics", title = "Longway Epics", layout = M["build-picker-layout"](), finder = _25_, format = _27_, confirm = _29_})
+  return Snacks.picker({source = "longway_epics", title = "Longway Epics", layout = M["build-picker-layout"](), preview = "preview", finder = _27_, format = _37_, confirm = _39_})
 end
 M["pick-presets"] = function()
   local Snacks = require("snacks")
@@ -198,26 +247,26 @@ M["pick-presets"] = function()
     local is_default = (name == default_preset)
     local desc = (preset.description or preset.query or "")
     local text
-    local _32_
+    local _42_
     if is_default then
-      _32_ = " (default)"
+      _42_ = " (default)"
     else
-      _32_ = ""
+      _42_ = ""
     end
-    text = (name .. ": " .. desc .. _32_)
-    local function _34_()
+    text = (name .. ": " .. desc .. _42_)
+    local function _44_()
       if is_default then
         return "\n(default preset)"
       else
         return ""
       end
     end
-    table.insert(items, {text = text, idx = idx, name = name, query = (preset.query or ""), description = desc, is_default = is_default, preview = {text = string.format("Preset: %s\nQuery: %s\nDescription: %s%s", name, (preset.query or ""), (preset.description or ""), _34_()), ft = "yaml"}})
+    table.insert(items, {text = text, idx = idx, name = name, query = (preset.query or ""), description = desc, is_default = is_default, preview = {text = string.format("Preset: %s\nQuery: %s\nDescription: %s%s", name, (preset.query or ""), (preset.description or ""), _44_()), ft = "yaml"}})
   end
   if (#items == 0) then
     return notify.warn("No presets configured")
   else
-    local function _35_(item, picker)
+    local function _45_(item, picker)
       local ret = {}
       table.insert(ret, {(item.name or ""), "SnacksPickerLabel"})
       table.insert(ret, {(" \226\128\148 " .. (item.description or "")), "Comment"})
@@ -227,7 +276,7 @@ M["pick-presets"] = function()
       end
       return ret
     end
-    local function _37_(picker, item)
+    local function _47_(picker, item)
       picker:close()
       if item then
         local core = require("longway.core")
@@ -236,7 +285,7 @@ M["pick-presets"] = function()
         return nil
       end
     end
-    return Snacks.picker({source = "longway_presets", title = "Longway Presets", layout = M["build-picker-layout"](), items = items, format = _35_, confirm = _37_})
+    return Snacks.picker({source = "longway_presets", title = "Longway Presets", layout = M["build-picker-layout"](), preview = "preview", items = items, format = _45_, confirm = _47_})
   end
 end
 M["pick-modified"] = function(opts)
@@ -245,7 +294,7 @@ M["pick-modified"] = function(opts)
   local diff = require("longway.sync.diff")
   local stories_dir = config["get-stories-dir"]()
   local epics_dir = config["get-epics-dir"]()
-  local function _40_(finder_opts, ctx)
+  local function _50_(finder_opts, ctx)
     local items = {}
     local story_files = vim.fn.glob((stories_dir .. "/*.md"), false, true)
     local epic_files = vim.fn.glob((epics_dir .. "/*.md"), false, true)
@@ -253,7 +302,7 @@ M["pick-modified"] = function(opts)
     local idx = 0
     for _, filepath in ipairs(all_files) do
       local ok, content
-      local function _41_()
+      local function _51_()
         local f = io.open(filepath, "r")
         if f then
           local c = f:read("*a")
@@ -263,7 +312,7 @@ M["pick-modified"] = function(opts)
           return nil
         end
       end
-      ok, content = pcall(_41_)
+      ok, content = pcall(_51_)
       if (ok and content) then
         local parsed = parser.parse(content)
         local fm = parsed.frontmatter
@@ -290,7 +339,7 @@ M["pick-modified"] = function(opts)
           local has_conflict = (fm.conflict_sections ~= nil)
           local name = (fm.title or string.match(content, "# ([^\n]+)") or tostring(shortcut_id))
           idx = (idx + 1)
-          table.insert(items, {text = string.format("%s %s (%s)", tostring(shortcut_id), name, table.concat(sections, ", ")), idx = idx, id = shortcut_id, name = name, file = filepath, changed_sections = sections, has_conflict = has_conflict, preview = {text = content, ft = "markdown"}})
+          table.insert(items, {text = string.format("%s %s (%s)", tostring(shortcut_id), name, table.concat(sections, ", ")), idx = idx, id = shortcut_id, name = name, file = filepath, changed_sections = sections, has_conflict = has_conflict, preview = "file"})
         else
         end
       else
@@ -298,7 +347,7 @@ M["pick-modified"] = function(opts)
     end
     return items
   end
-  local function _48_(item, picker)
+  local function _58_(item, picker)
     local ret = {}
     table.insert(ret, {tostring((item.id or "")), "Number"})
     table.insert(ret, {" ", {virtual = true}})
@@ -310,7 +359,7 @@ M["pick-modified"] = function(opts)
     end
     return ret
   end
-  local function _50_(picker)
+  local function _60_(picker)
     local item = picker:current()
     local push_mod = require("longway.sync.push")
     if (item and item.file) then
@@ -320,7 +369,7 @@ M["pick-modified"] = function(opts)
       return nil
     end
   end
-  local function _52_(picker, item)
+  local function _62_(picker, item)
     picker:close()
     if (item and item.file) then
       return vim.cmd(("edit " .. item.file))
@@ -328,7 +377,7 @@ M["pick-modified"] = function(opts)
       return nil
     end
   end
-  return Snacks.picker({source = "longway_modified", title = "Longway Modified Files", layout = M["build-picker-layout"](), finder = _40_, format = _48_, win = {input = {keys = {["<C-p>"] = {fn = _50_, mode = {"n", "i"}, desc = "Push selected file"}}}}, confirm = _52_})
+  return Snacks.picker({source = "longway_modified", title = "Longway Modified Files", layout = M["build-picker-layout"](), preview = "preview", finder = _50_, format = _58_, win = {input = {keys = {["<C-p>"] = {fn = _60_, mode = {"n", "i"}, desc = "Push selected file"}}}}, confirm = _62_})
 end
 M["pick-comments"] = function(opts)
   local Snacks = require("snacks")
@@ -344,7 +393,7 @@ M["pick-comments"] = function(opts)
   if not shortcut_id then
     return notify.error("Not a longway-managed file")
   else
-    local function _54_(finder_opts, ctx)
+    local function _64_(finder_opts, ctx)
       local result = comments_api.list(shortcut_id)
       local items = {}
       if result.ok then
@@ -360,14 +409,14 @@ M["pick-comments"] = function(opts)
       end
       return items
     end
-    local function _56_(item, picker)
+    local function _66_(item, picker)
       local ret = {}
       table.insert(ret, {(item.author or ""), "SnacksPickerLabel"})
       table.insert(ret, {(" \194\183 " .. M.truncate((item.created_at or ""), 16)), "Comment"})
       table.insert(ret, {(" \226\128\148 " .. M.truncate(M["first-line"]((item.body or "")), 50)), "Normal"})
       return ret
     end
-    local function _57_(picker, item)
+    local function _67_(picker, item)
       picker:close()
       if item then
         local marker = ("comment:" .. tostring(item.id))
@@ -386,7 +435,7 @@ M["pick-comments"] = function(opts)
         return nil
       end
     end
-    return Snacks.picker({source = "longway_comments", title = string.format("Comments \226\128\148 Story %s", tostring(shortcut_id)), layout = M["build-picker-layout"](), finder = _54_, format = _56_, confirm = _57_})
+    return Snacks.picker({source = "longway_comments", title = string.format("Comments \226\128\148 Story %s", tostring(shortcut_id)), layout = M["build-picker-layout"](), preview = "preview", finder = _64_, format = _66_, confirm = _67_})
   end
 end
 return M

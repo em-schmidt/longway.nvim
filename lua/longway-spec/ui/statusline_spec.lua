@@ -1,4 +1,4 @@
--- [nfnl] Compiled from fnl/longway-spec/ui/statusline_spec.fnl by https://github.com/Olical/nfnl, do not edit.
+-- [nfnl] fnl/longway-spec/ui/statusline_spec.fnl
 local t = require("longway-spec.init")
 require("longway-spec.assertions")
 local statusline = require("longway.ui.statusline")

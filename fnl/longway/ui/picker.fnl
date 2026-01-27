@@ -73,6 +73,7 @@
     (Snacks.picker {:source "longway_stories"
                     :title "Longway Stories"
                     :layout (M.build-picker-layout)
+                    :preview "preview"
                     :finder (fn [finder-opts ctx]
                               (let [result (search-api.search-stories-all query {:max_results 100})
                                     items []]
@@ -99,8 +100,9 @@
                                                            :owners owner-names
                                                            :estimate story.estimate
                                                            :file file
-                                                           :preview {:text (or story.description "No description")
-                                                                     :ft "markdown"}}))))
+                                                           :preview (if file "file"
+                                                                        {:text (or story.description "No description")
+                                                                         :ft "markdown"})}))))
                                 items))
                     :format (fn [item picker]
                               (let [ret []]
@@ -132,6 +134,7 @@
     (Snacks.picker {:source "longway_epics"
                     :title "Longway Epics"
                     :layout (M.build-picker-layout)
+                    :preview "preview"
                     :finder (fn [finder-opts ctx]
                               (let [result (epics-api.list)
                                     items []]
@@ -142,6 +145,32 @@
                                           stats (or epic.stats {})
                                           done (or stats.num_stories_done 0)
                                           total-stories (or stats.num_stories 0)
+                                          started (or stats.num_stories_started 0)
+                                          unstarted (or stats.num_stories_unstarted 0)
+                                          points-done (or stats.num_points_done 0)
+                                          points-total (or stats.num_points 0)
+                                          label-names (let [names []]
+                                                        (each [_ lbl (ipairs (or epic.labels []))]
+                                                          (table.insert names (or lbl.name "")))
+                                                        (table.concat names ", "))
+                                          preview-text (if epic.description
+                                                           epic.description
+                                                           (string.format
+                                                             "# %s\n\n**State:** %s\n**Stories:** %d/%d done (%d started, %d unstarted)\n**Points:** %d/%d%s%s%s"
+                                                             (or epic.name "")
+                                                             state
+                                                             done total-stories
+                                                             started unstarted
+                                                             points-done points-total
+                                                             (if (and epic.planned_start_date (not= epic.planned_start_date vim.NIL))
+                                                                 (.. "\n**Start:** " epic.planned_start_date)
+                                                                 "")
+                                                             (if (and epic.deadline (not= epic.deadline vim.NIL))
+                                                                 (.. "\n**Deadline:** " epic.deadline)
+                                                                 "")
+                                                             (if (> (length label-names) 0)
+                                                                 (.. "\n**Labels:** " label-names)
+                                                                 "")))
                                           text (string.format "%s %s [%s] (%d/%d stories)"
                                                               (tostring epic.id)
                                                               (or epic.name "")
@@ -155,8 +184,9 @@
                                                            :done done
                                                            :total_stories total-stories
                                                            :file file
-                                                           :preview {:text (or epic.description "No description")
-                                                                     :ft "markdown"}}))))
+                                                           :preview (if file "file"
+                                                                        {:text preview-text
+                                                                         :ft "markdown"})}))))
                                 items))
                     :format (fn [item picker]
                               (let [ret []]
@@ -213,6 +243,7 @@
         (Snacks.picker {:source "longway_presets"
                     :title "Longway Presets"
                     :layout (M.build-picker-layout)
+                    :preview "preview"
                     :items items
                     :format (fn [item picker]
                               (let [ret []]
@@ -241,6 +272,7 @@
     (Snacks.picker {:source "longway_modified"
                     :title "Longway Modified Files"
                     :layout (M.build-picker-layout)
+                    :preview "preview"
                     :finder (fn [finder-opts ctx]
                               (let [items []
                                     ;; Gather all markdown files
@@ -281,8 +313,7 @@
                                                                  :file filepath
                                                                  :changed_sections sections
                                                                  :has_conflict has-conflict
-                                                                 :preview {:text content
-                                                                           :ft "markdown"}})))))))
+                                                                 :preview "file"})))))))
                                 items))
                     :format (fn [item picker]
                               (let [ret []]
@@ -330,6 +361,7 @@
         (Snacks.picker {:source "longway_comments"
                         :title (string.format "Comments — Story %s" (tostring shortcut-id))
                         :layout (M.build-picker-layout)
+                        :preview "preview"
                         :finder (fn [finder-opts ctx]
                                   (let [result (comments-api.list shortcut-id)
                                         items []]

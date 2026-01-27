@@ -1,4 +1,4 @@
--- [nfnl] Compiled from fnl/longway-spec/ui/picker_spec.fnl by https://github.com/Olical/nfnl, do not edit.
+-- [nfnl] fnl/longway-spec/ui/picker_spec.fnl
 local t = require("longway-spec.init")
 require("longway-spec.assertions")
 local picker = require("longway.ui.picker")

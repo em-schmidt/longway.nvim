@@ -1,4 +1,4 @@
--- [nfnl] Compiled from fnl/longway/ui/statusline.fnl by https://github.com/Olical/nfnl, do not edit.
+-- [nfnl] fnl/longway/ui/statusline.fnl
 local config = require("longway.config")
 local M = {}
 local augroup_name = "longway_statusline"
