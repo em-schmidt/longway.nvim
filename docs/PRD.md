@@ -744,6 +744,7 @@ fnl/longway/
 │   ├── push.fnl       -- Push operations
 │   ├── diff.fnl       -- Diff/conflict detection
 │   ├── resolve.fnl    -- Conflict resolution
+│   ├── auto.fnl       -- Auto-push on save with debounce
 │   ├── tasks.fnl      -- Task sync logic
 │   └── comments.fnl   -- Comment sync logic
 ├── markdown/
@@ -754,8 +755,10 @@ fnl/longway/
 │   └── comments.fnl   -- Parse/render comment sections
 ├── ui/
 │   ├── notify.fnl     -- Notification helpers
+│   ├── confirm.fnl    -- Confirmation prompts
 │   ├── picker.fnl     -- Snacks picker integration
-│   └── progress.fnl   -- Progress indicators
+│   ├── progress.fnl   -- Progress indicators
+│   └── statusline.fnl -- Statusline component (lualine, custom)
 ├── cache/
 │   ├── store.fnl      -- Local cache management
 │   └── state.fnl      -- Sync state tracking
@@ -769,10 +772,10 @@ fnl/longway/
 
 **Required:**
 - `plenary.nvim` - Async utilities, HTTP client, path handling
-- `folke/snacks.nvim` - Picker UI, notifications, and utilities
 
 **Optional:**
-- `nvim-notify` - For enhanced notifications (falls back to snacks/vim.notify)
+- `folke/snacks.nvim` - Picker UI (stories, epics, presets, modified files picker)
+- `nvim-notify` - For enhanced notifications (falls back to vim.notify)
 
 ### Fennel/Lua Compilation
 
@@ -813,17 +816,17 @@ Using nfnl for Fennel → Lua compilation:
 - [x] Comment deletion with confirmation
 - [x] Timestamp formatting and timezone handling
 
-### Phase 5: Bidirectional Sync & Conflicts (v0.5.0)
-- [ ] Change detection (local/remote) for all sections
-- [ ] Auto-push on save
-- [ ] Conflict detection per section
-- [ ] Basic conflict resolution
+### Phase 5: Bidirectional Sync & Conflicts (v0.5.0) ✓
+- [x] Change detection (local/remote) for all sections
+- [x] Auto-push on save
+- [x] Conflict detection per section
+- [x] Basic conflict resolution
 
-### Phase 6: UI Polish (v0.6.0)
-- [ ] Snacks pickers (stories, epics, presets, comments)
-- [ ] Progress indicators
-- [ ] Notification improvements
-- [ ] Status line integration
+### Phase 6: UI Polish (v0.6.0) ✓
+- [x] Snacks pickers (stories, epics, presets, modified)
+- [x] Progress indicators
+- [x] Notification improvements
+- [x] Status line integration
 
 ### Phase 7: Advanced Features (v1.0.0)
 - [ ] Advanced conflict resolution (vimdiff)

@@ -4,7 +4,7 @@ This document outlines the step-by-step implementation plan for longway.nvim bas
 
 ## Current State
 
-Phases 1–4 are complete (v0.4.0). The plugin supports:
+Phases 1–6 are complete (v0.6.0). The plugin supports:
 - API client with authentication and token resolution
 - Story and epic pull/push with markdown rendering
 - Search/filter with presets and bulk sync
@@ -14,7 +14,13 @@ Phases 1–4 are complete (v0.4.0). The plugin supports:
 - Confirmation prompts for task/comment deletion
 - Warning when editing existing comments (Shortcut API doesn't support comment edits)
 - Content hashing for change detection (sync_hash, tasks_hash, comments_hash)
-- 368 tests across all modules
+- Bidirectional sync with section-level change detection (description, tasks, comments)
+- Auto-push on save with debounce (opt-in via config)
+- Conflict detection and resolution (local/remote/manual strategies)
+- Snacks picker integration (stories, epics, presets, modified files)
+- Progress indicators for bulk sync operations
+- Statusline integration (lualine component + raw status API)
+- 400+ tests across all modules
 
 ---
 
@@ -294,44 +300,44 @@ Create `fnl/longway/sync/comments.fnl`:
 Create `fnl/longway/sync/diff.fnl`:
 
 **Tasks:**
-- [ ] Implement content hashing per section
-- [ ] Compare local hash with stored hash
-- [ ] Compare remote `updated_at` with stored timestamp
-- [ ] Categorize: unchanged, local-only, remote-only, conflict
+- [x] Implement content hashing per section
+- [x] Compare local hash with stored hash
+- [x] Compare remote `updated_at` with stored timestamp
+- [x] Categorize: unchanged, local-only, remote-only, conflict
 
 ### 5.2 Sync State Module
 
-Create `fnl/longway/cache/state.fnl`:
+Sync state stored in YAML frontmatter (no separate state files):
 
 **Tasks:**
-- [ ] Track sync state per story/epic in JSON
-- [ ] Store: local_hash, remote_updated_at, last_synced_at
-- [ ] Update state after successful sync
+- [x] Track sync state per story/epic in frontmatter
+- [x] Store: sync_hash, tasks_hash, comments_hash, updated_at
+- [x] Update state after successful sync
 
 ### 5.3 Auto-Push on Save
 
 **Tasks:**
-- [ ] Add autocmd for BufWritePost in workspace
-- [ ] Implement debounced push (configurable delay)
-- [ ] Add `auto_push_on_save` config option
-- [ ] Show notification on auto-push
+- [x] Add autocmd for BufWritePost in workspace
+- [x] Implement debounced push (configurable delay)
+- [x] Add `auto_push_on_save` config option
+- [x] Show notification on auto-push
 
 ### 5.4 Conflict Detection
 
 **Tasks:**
-- [ ] Check remote before push
-- [ ] Detect when both local and remote changed
-- [ ] Store conflict state for resolution
+- [x] Check remote before push
+- [x] Detect when both local and remote changed
+- [x] Store conflict state for resolution
 
 ### 5.5 Conflict Resolution
 
 Create `fnl/longway/sync/resolve.fnl`:
 
 **Tasks:**
-- [ ] Implement `:LongwayResolve local` - force push
-- [ ] Implement `:LongwayResolve remote` - force pull
-- [ ] Implement `:LongwayResolve manual` - insert conflict markers
-- [ ] Add conflict notification with options
+- [x] Implement `:LongwayResolve local` - force push
+- [x] Implement `:LongwayResolve remote` - force pull
+- [x] Implement `:LongwayResolve manual` - insert conflict markers
+- [x] Add conflict notification with options
 
 **Phase 5 Deliverables:**
 - Automatic push on save (optional)
@@ -350,54 +356,54 @@ Create `fnl/longway/sync/resolve.fnl`:
 Create `fnl/longway/ui/picker.fnl`:
 
 **Tasks:**
-- [ ] Implement stories picker with snacks.picker
-- [ ] Add story preview (rendered markdown)
-- [ ] Open story file on selection
-- [ ] Add state/owner/iteration columns
+- [x] Implement stories picker with snacks.picker
+- [x] Add story preview (rendered markdown)
+- [x] Open story file on selection
+- [x] Add state/owner/iteration columns
 
 ### 6.2 Snacks Picker - Epics
 
 **Tasks:**
-- [ ] Implement epics picker
-- [ ] Show epic stats in preview
-- [ ] Open epic file on selection
+- [x] Implement epics picker
+- [x] Show epic stats in preview
+- [x] Open epic file on selection
 
 ### 6.3 Snacks Picker - Presets
 
 **Tasks:**
-- [ ] Implement preset picker
-- [ ] Show preset description
-- [ ] Run sync on selection
+- [x] Implement preset picker
+- [x] Show preset description
+- [x] Run sync on selection
 
 ### 6.4 Snacks Picker - Modified
 
 **Tasks:**
-- [ ] Implement modified files picker
-- [ ] Show diff preview
-- [ ] Batch push option
+- [x] Implement modified files picker
+- [x] Show diff preview
+- [x] Batch push option
 
 ### 6.5 Progress Indicators
 
 Create `fnl/longway/ui/progress.fnl`:
 
 **Tasks:**
-- [ ] Show progress for bulk sync operations
-- [ ] Integrate with snacks or vim.notify
-- [ ] Display X/Y stories synced
+- [x] Show progress for bulk sync operations
+- [x] Integrate with snacks or vim.notify
+- [x] Display X/Y stories synced
 
 ### 6.6 Notification Improvements
 
 **Tasks:**
-- [ ] Categorize notifications (info, warn, error)
-- [ ] Add sync summary notifications
-- [ ] Respect `notify_level` config
+- [x] Categorize notifications (info, warn, error)
+- [x] Add sync summary notifications
+- [x] Respect `notify_level` config
 
 ### 6.7 Status Line Integration
 
 **Tasks:**
-- [ ] Expose sync status for statusline plugins
-- [ ] Show modified/conflict indicators
-- [ ] Document integration with lualine/etc.
+- [x] Expose sync status for statusline plugins
+- [x] Show modified/conflict indicators
+- [x] Document integration with lualine/etc.
 
 **Phase 6 Deliverables:**
 - `:LongwayPicker stories/epics/presets/modified`
@@ -474,28 +480,36 @@ init.fnl
 ├── core.fnl ──────────────────────┐
 │   ├── sync/pull.fnl              │
 │   │   ├── api/stories.fnl       │
-│   │   ├── api/comments.fnl      │  (Phase 4: fetch comments separately)
+│   │   ├── api/comments.fnl      │
 │   │   ├── api/epics.fnl         │
 │   │   ├── markdown/renderer.fnl │
 │   │   └── cache/store.fnl       │
 │   ├── sync/push.fnl              │
 │   │   ├── markdown/parser.fnl   │
 │   │   ├── sync/tasks.fnl        │
-│   │   ├── sync/comments.fnl     │  (Phase 4)
+│   │   ├── sync/comments.fnl     │
+│   │   ├── sync/diff.fnl         │  (Phase 5: change detection)
 │   │   ├── api/tasks.fnl         │
-│   │   ├── api/comments.fnl      │  (Phase 4)
+│   │   ├── api/comments.fnl      │
 │   │   └── ui/confirm.fnl        │
 │   ├── sync/tasks.fnl             │
 │   │   └── markdown/tasks.fnl    │
-│   └── sync/comments.fnl          │  (Phase 4)
-│       ├── markdown/comments.fnl  │
-│       └── api/comments.fnl      │
+│   ├── sync/comments.fnl          │
+│   │   ├── markdown/comments.fnl  │
+│   │   └── api/comments.fnl      │
+│   ├── sync/diff.fnl              │  (Phase 5: section-level change detection)
+│   │   └── util/hash.fnl         │
+│   ├── sync/resolve.fnl           │  (Phase 5: conflict resolution)
+│   │   ├── sync/pull.fnl         │
+│   │   └── sync/push.fnl         │
+│   └── sync/auto.fnl              │  (Phase 5: auto-push on save)
+│       └── sync/push.fnl         │
 ├── api/                           │
 │   ├── client.fnl ◄───────────────┘
 │   ├── stories.fnl
 │   ├── epics.fnl
 │   ├── tasks.fnl
-│   ├── comments.fnl                   (Phase 4)
+│   ├── comments.fnl
 │   ├── members.fnl
 │   ├── workflows.fnl
 │   ├── iterations.fnl
@@ -506,10 +520,13 @@ init.fnl
 │   ├── renderer.fnl ──► tasks.fnl, comments.fnl (delegates rendering)
 │   ├── frontmatter.fnl
 │   ├── tasks.fnl      (single source of truth for tasks)
-│   └── comments.fnl   (single source of truth for comments, Phase 4)
+│   └── comments.fnl   (single source of truth for comments)
 ├── ui/
 │   ├── notify.fnl
-│   └── confirm.fnl
+│   ├── confirm.fnl
+│   ├── picker.fnl      (Phase 6: snacks.picker integration)
+│   ├── progress.fnl    (Phase 6: bulk operation progress)
+│   └── statusline.fnl  (Phase 6: statusline component)
 ├── cache/
 │   └── store.fnl
 └── util/
@@ -530,10 +547,8 @@ init.fnl
 
 ## Next Steps
 
-Phases 1–4 are complete. Next:
+Phases 1–6 are complete. Next:
 
-1. **Phase 5: Bidirectional Sync & Conflicts** — Change detection, auto-push on save, conflict resolution → See [PHASE_5_PLAN.md](./PHASE_5_PLAN.md)
-2. **Phase 6: UI Polish** — Snacks picker integration, progress indicators, statusline
-3. **Phase 7: Advanced Features** — Vimdiff conflict resolution, batch operations, offline queue, documentation
+1. **Phase 7: Advanced Features** — Vimdiff conflict resolution, batch operations, offline queue, rate limiting, documentation, test coverage
 
 Each phase should result in a working, usable feature set.
