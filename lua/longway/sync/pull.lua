@@ -8,6 +8,7 @@ local comments_md = require("longway.markdown.comments")
 local renderer = require("longway.markdown.renderer")
 local slug = require("longway.util.slug")
 local notify = require("longway.ui.notify")
+local progress = require("longway.ui.progress")
 local M = {}
 local function ensure_directory(path)
   local exists = vim.fn.isdirectory(path)
@@ -172,11 +173,12 @@ M["sync-stories"] = function(query, opts)
   else
     local stories = result.data
     local total = #stories
+    local progress_id = progress.start("Syncing", total)
     local synced_count = vim.fn.ref(0)
     local failed_count = vim.fn.ref(0)
     local errors = {}
-    notify.info(string.format("Found %d stories to sync", total))
     for i, story in ipairs(stories) do
+      progress.update(progress_id, i, total, (story.name or tostring(story.id)))
       local pull_result = M["pull-story"](story.id)
       if pull_result.ok then
         vim.fn.setreg(synced_count, (vim.fn.getreg(synced_count) + 1))
@@ -187,7 +189,7 @@ M["sync-stories"] = function(query, opts)
     end
     local synced = vim.fn.getreg(synced_count)
     local failed = vim.fn.getreg(failed_count)
-    notify.info(string.format("Sync complete: %d synced, %d failed", synced, failed))
+    progress.finish(progress_id, synced, failed)
     return {ok = true, synced = synced, failed = failed, errors = errors, total = total}
   end
 end
@@ -213,9 +215,14 @@ M["sync-all-presets"] = function()
     notify.warn("No presets configured")
     return {error = "No presets configured", ok = false}
   else
-    for name, _ in pairs(presets) do
+    local preset_names = vim.tbl_keys(presets)
+    local total = #preset_names
+    local progress_id = progress.start("Syncing presets", total)
+    for i, name in ipairs(preset_names) do
+      progress.update(progress_id, i, total, name)
       results[name] = M["sync-preset"](name)
     end
+    progress.finish(progress_id, total, 0)
     return {ok = true, results = results}
   end
 end

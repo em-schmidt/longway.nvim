@@ -10,6 +10,7 @@
 (local renderer (require :longway.markdown.renderer))
 (local slug (require :longway.util.slug))
 (local notify (require :longway.ui.notify))
+(local progress (require :longway.ui.progress))
 
 (local M {})
 
@@ -183,13 +184,14 @@
           ;; Got stories, sync each one
           (let [stories result.data
                 total (length stories)
+                progress-id (progress.start "Syncing" total)
                 synced-count (vim.fn.ref 0)
                 failed-count (vim.fn.ref 0)
                 errors []]
-            (notify.info (string.format "Found %d stories to sync" total))
 
-            ;; Process each story
+            ;; Process each story with progress tracking
             (each [i story (ipairs stories)]
+              (progress.update progress-id i total (or story.name (tostring story.id)))
               (let [pull-result (M.pull-story story.id)]
                 (if pull-result.ok
                     (vim.fn.setreg synced-count (+ (vim.fn.getreg synced-count) 1))
@@ -199,7 +201,7 @@
 
             (let [synced (vim.fn.getreg synced-count)
                   failed (vim.fn.getreg failed-count)]
-              (notify.info (string.format "Sync complete: %d synced, %d failed" synced failed))
+              (progress.finish progress-id synced failed)
               {:ok true
                :synced synced
                :failed failed
@@ -232,9 +234,13 @@
         (do
           (notify.warn "No presets configured")
           {:ok false :error "No presets configured"})
-        (do
-          (each [name _ (pairs presets)]
+        (let [preset-names (vim.tbl_keys presets)
+              total (length preset-names)
+              progress-id (progress.start "Syncing presets" total)]
+          (each [i name (ipairs preset-names)]
+            (progress.update progress-id i total name)
             (tset results name (M.sync-preset name)))
+          (progress.finish progress-id total 0)
           {:ok true :results results}))))
 
 M

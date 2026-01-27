@@ -24,7 +24,11 @@
   ;; Phase 5: Setup auto-push on save if enabled
   (when (. (config.get) :auto_push_on_save)
     (let [auto (require :longway.sync.auto)]
-      (auto.setup))))
+      (auto.setup)))
+
+  ;; Phase 6: Setup statusline buffer variable caching
+  (let [statusline (require :longway.ui.statusline)]
+    (statusline.setup)))
 
 ;; Expose core functions (Phase 1)
 (set M.pull core.pull)
@@ -52,6 +56,9 @@
 
 ;; Expose core functions (Phase 5)
 (set M.resolve core.resolve)
+
+;; Expose core functions (Phase 6)
+(set M.picker core.picker)
 
 ;; Expose config functions
 (set M.get-config config.get)

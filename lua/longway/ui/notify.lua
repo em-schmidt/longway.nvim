@@ -2,12 +2,22 @@
 local config = require("longway.config")
 local M = {}
 M.levels = {debug = vim.log.levels.DEBUG, info = vim.log.levels.INFO, warn = vim.log.levels.WARN, error = vim.log.levels.ERROR}
-M.notify = function(msg, level)
+local function snacks_available_3f()
+  local ok, snacks = pcall(require, "snacks")
+  return (ok and (snacks ~= nil) and (snacks.notify ~= nil))
+end
+M.notify = function(msg, level, opts)
   local cfg = config.get()
   local level0 = (level or vim.log.levels.INFO)
   if cfg.notify then
     if (level0 >= (cfg.notify_level or vim.log.levels.INFO)) then
-      return vim.notify(("[longway] " .. msg), level0)
+      if (opts and snacks_available_3f()) then
+        local Snacks = require("snacks")
+        local snacks_opts = vim.tbl_extend("force", {title = "longway"}, opts)
+        return Snacks.notify(("[longway] " .. msg), snacks_opts)
+      else
+        return vim.notify(("[longway] " .. msg), level0)
+      end
     else
       return nil
     end
@@ -73,5 +83,8 @@ M["api-error"] = function(msg, status)
 end
 M["no-token"] = function()
   return M.error("No Shortcut API token configured. Set SHORTCUT_API_TOKEN or configure token in setup()")
+end
+M["picker-error"] = function()
+  return M.error("snacks.nvim is required for :LongwayPicker. Install folke/snacks.nvim")
 end
 return M

@@ -10,13 +10,26 @@
                :warn vim.log.levels.WARN
                :error vim.log.levels.ERROR})
 
-(fn M.notify [msg level]
-  "Send a notification if notifications are enabled"
+(fn snacks-available? []
+  "Check if Snacks.notify is available"
+  (let [(ok snacks) (pcall require :snacks)]
+    (and ok (not= snacks nil) (not= snacks.notify nil))))
+
+(fn M.notify [msg level opts]
+  "Send a notification if notifications are enabled.
+   opts: {:id string :title string :timeout number} (optional, for snacks)"
   (let [cfg (config.get)
         level (or level vim.log.levels.INFO)]
     (when cfg.notify
       (when (>= level (or cfg.notify_level vim.log.levels.INFO))
-        (vim.notify (.. "[longway] " msg) level)))))
+        (if (and opts (snacks-available?))
+            ;; Use Snacks.notify for rich features (in-place updates, titles)
+            (let [Snacks (require :snacks)
+                  snacks-opts (vim.tbl_extend :force
+                                {:title "longway"} opts)]
+              (Snacks.notify (.. "[longway] " msg) snacks-opts))
+            ;; Fallback to vim.notify
+            (vim.notify (.. "[longway] " msg) level))))))
 
 (fn M.debug [msg]
   "Send a debug notification"
@@ -81,5 +94,9 @@
 (fn M.no-token []
   "Notify that no API token is configured"
   (M.error "No Shortcut API token configured. Set SHORTCUT_API_TOKEN or configure token in setup()"))
+
+(fn M.picker-error []
+  "Notify that snacks.nvim is required for picker"
+  (M.error "snacks.nvim is required for :LongwayPicker. Install folke/snacks.nvim"))
 
 M
