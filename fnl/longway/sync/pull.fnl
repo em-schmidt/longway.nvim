@@ -82,7 +82,7 @@
   "Pull a story and open it in a new buffer"
   (let [result (M.pull-story story-id)]
     (when result.ok
-      (vim.cmd (.. "edit " result.path)))
+      (vim.cmd (.. "edit " (vim.fn.fnameescape result.path))))
     result))
 
 (fn M.refresh-current-buffer []
@@ -164,7 +164,7 @@
   "Pull an epic and open it in a new buffer"
   (let [result (M.pull-epic epic-id)]
     (when result.ok
-      (vim.cmd (.. "edit " result.path)))
+      (vim.cmd (.. "edit " (vim.fn.fnameescape result.path))))
     result))
 
 (fn M.sync-stories [query opts]

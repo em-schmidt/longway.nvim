@@ -183,7 +183,7 @@ M["pick-stories"] = function(opts)
     picker:close()
     if item then
       if item.file then
-        return vim.cmd(("edit " .. item.file))
+        return vim.cmd(("edit " .. vim.fn.fnameescape(item.file)))
       else
         local pull = require("longway.sync.pull")
         return pull["pull-story-to-buffer"](item.id)
@@ -274,7 +274,7 @@ M["pick-epics"] = function(opts)
     picker:close()
     if item then
       if item.file then
-        return vim.cmd(("edit " .. item.file))
+        return vim.cmd(("edit " .. vim.fn.fnameescape(item.file)))
       else
         local pull = require("longway.sync.pull")
         return pull["pull-epic-to-buffer"](item.id)
@@ -415,7 +415,7 @@ M["pick-modified"] = function(opts)
       local item = picker:current()
       local push_mod = require("longway.sync.push")
       if (item and item.file) then
-        vim.cmd(("edit " .. item.file))
+        vim.cmd(("edit " .. vim.fn.fnameescape(item.file)))
         return push_mod["push-current-buffer"]()
       else
         return nil
@@ -427,7 +427,7 @@ M["pick-modified"] = function(opts)
   local function _71_(picker, item)
     picker:close()
     if (item and item.file) then
-      return vim.cmd(("edit " .. item.file))
+      return vim.cmd(("edit " .. vim.fn.fnameescape(item.file)))
     else
       return nil
     end

@@ -152,7 +152,7 @@
                                (picker:close)
                                (when item
                                  (if item.file
-                                     (vim.cmd (.. "edit " item.file))
+                                     (vim.cmd (.. "edit " (vim.fn.fnameescape item.file)))
                                      (let [pull (require :longway.sync.pull)]
                                        (pull.pull-story-to-buffer item.id)))))})))
 
@@ -238,7 +238,7 @@
                                (picker:close)
                                (when item
                                  (if item.file
-                                     (vim.cmd (.. "edit " item.file))
+                                     (vim.cmd (.. "edit " (vim.fn.fnameescape item.file)))
                                      (let [pull (require :longway.sync.pull)]
                                        (pull.pull-epic-to-buffer item.id)))))})))
 
@@ -365,13 +365,13 @@
                                                                 (let [item (picker:current)
                                                                       push-mod (require :longway.sync.push)]
                                                                   (when (and item item.file)
-                                                                    (vim.cmd (.. "edit " item.file))
+                                                                    (vim.cmd (.. "edit " (vim.fn.fnameescape item.file)))
                                                                     (push-mod.push-current-buffer)))))
                                                         keymap)}}}
                     :confirm (fn [picker item]
                                (picker:close)
                                (when (and item item.file)
-                                 (vim.cmd (.. "edit " item.file))))})))
+                                 (vim.cmd (.. "edit " (vim.fn.fnameescape item.file)))))})))
 
 ;; ---------------------------------------------------------------------------
 ;; Source: Comments
