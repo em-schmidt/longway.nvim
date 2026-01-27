@@ -1,4 +1,4 @@
--- [nfnl] fnl/longway/ui/statusline.fnl
+-- [nfnl] Compiled from fnl/longway/ui/statusline.fnl by https://github.com/Olical/nfnl, do not edit.
 local config = require("longway.config")
 local M = {}
 local augroup_name = "longway_statusline"
@@ -20,33 +20,58 @@ local function refresh_buffer_vars(bufnr)
       else
         local diff = require("longway.sync.diff")
         local first_sync = diff["first-sync?"](fm)
+        local changes
+        if not first_sync then
+          changes = diff["detect-local-changes"](parsed)
+        else
+          changes = nil
+        end
+        local changed_sections
+        do
+          local sections = {}
+          if changes then
+            if changes.description then
+              table.insert(sections, "description")
+            else
+            end
+            if changes.tasks then
+              table.insert(sections, "tasks")
+            else
+            end
+            if changes.comments then
+              table.insert(sections, "comments")
+            else
+            end
+          else
+          end
+          changed_sections = sections
+        end
+        local conflict_sections = (fm.conflict_sections or vim.NIL)
+        local has_conflict = (fm.conflict_sections ~= nil)
         local sync_status
         if first_sync then
           sync_status = "new"
+        elseif has_conflict then
+          sync_status = "conflict"
+        elseif (#changed_sections > 0) then
+          sync_status = "modified"
         else
-          local has_conflict = (fm.conflict_sections ~= nil)
-          if has_conflict then
-            sync_status = "conflict"
-          else
-            if diff["any-local-change?"](parsed) then
-              sync_status = "modified"
-            else
-              sync_status = "synced"
-            end
-          end
+          sync_status = "synced"
         end
         vim.api.nvim_buf_set_var(bufnr, "longway_id", shortcut_id)
         vim.api.nvim_buf_set_var(bufnr, "longway_type", (fm.shortcut_type or "story"))
         vim.api.nvim_buf_set_var(bufnr, "longway_state", (fm.state or ""))
         vim.api.nvim_buf_set_var(bufnr, "longway_sync_status", sync_status)
-        local function _4_()
-          if fm.conflict_sections then
+        local function _7_()
+          if has_conflict then
             return true
           else
             return false
           end
         end
-        return vim.api.nvim_buf_set_var(bufnr, "longway_conflict", _4_())
+        vim.api.nvim_buf_set_var(bufnr, "longway_conflict", _7_())
+        vim.api.nvim_buf_set_var(bufnr, "longway_changed_sections", changed_sections)
+        return vim.api.nvim_buf_set_var(bufnr, "longway_conflict_sections", conflict_sections)
       end
     else
       return nil
@@ -86,14 +111,21 @@ M["get-status-data"] = function()
   local bufnr = vim.api.nvim_get_current_buf()
   local id = get_buf_var(bufnr, "longway_id")
   if (id and (id ~= vim.NIL)) then
-    return {shortcut_id = id, shortcut_type = (get_buf_var(bufnr, "longway_type") or "story"), state = (get_buf_var(bufnr, "longway_state") or ""), sync_status = (get_buf_var(bufnr, "longway_sync_status") or "unknown"), conflict = (get_buf_var(bufnr, "longway_conflict") or false)}
+    local raw_conflict = get_buf_var(bufnr, "longway_conflict_sections")
+    local conflict_sections
+    if (raw_conflict and (raw_conflict ~= vim.NIL)) then
+      conflict_sections = raw_conflict
+    else
+      conflict_sections = nil
+    end
+    return {shortcut_id = id, shortcut_type = (get_buf_var(bufnr, "longway_type") or "story"), state = (get_buf_var(bufnr, "longway_state") or ""), sync_status = (get_buf_var(bufnr, "longway_sync_status") or "unknown"), changed_sections = (get_buf_var(bufnr, "longway_changed_sections") or {}), conflict_sections = conflict_sections}
   else
     return nil
   end
 end
 M["lualine-component"] = function()
   local color_fn
-  local function _12_()
+  local function _16_()
     local bufnr = vim.api.nvim_get_current_buf()
     local sync_status = (get_buf_var(bufnr, "longway_sync_status") or "unknown")
     if (sync_status == "synced") then
@@ -108,7 +140,7 @@ M["lualine-component"] = function()
       return {fg = "#cdd6f4"}
     end
   end
-  color_fn = _12_
+  color_fn = _16_
   local tbl = {cond = M["is-longway-buffer"], color = color_fn}
   tbl[1] = M["get-status"]
   return tbl
@@ -117,7 +149,7 @@ M.setup = function()
   if not setup_done then
     setup_done = true
     local group = vim.api.nvim_create_augroup(augroup_name, {clear = true})
-    local function _14_(ev)
+    local function _18_(ev)
       local ok, err = pcall(refresh_buffer_vars, ev.buf)
       if not ok then
         if config.get().debug then
@@ -129,8 +161,8 @@ M.setup = function()
         return nil
       end
     end
-    vim.api.nvim_create_autocmd("BufEnter", {group = group, pattern = "*.md", callback = _14_})
-    local function _17_(ev)
+    vim.api.nvim_create_autocmd("BufEnter", {group = group, pattern = "*.md", callback = _18_})
+    local function _21_(ev)
       local ok, err = pcall(refresh_buffer_vars, ev.buf)
       if not ok then
         if config.get().debug then
@@ -142,7 +174,7 @@ M.setup = function()
         return nil
       end
     end
-    return vim.api.nvim_create_autocmd("BufWritePost", {group = group, pattern = "*.md", callback = _17_})
+    return vim.api.nvim_create_autocmd("BufWritePost", {group = group, pattern = "*.md", callback = _21_})
   else
     return nil
   end

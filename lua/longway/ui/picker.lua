@@ -1,4 +1,4 @@
--- [nfnl] fnl/longway/ui/picker.fnl
+-- [nfnl] Compiled from fnl/longway/ui/picker.fnl by https://github.com/Olical/nfnl, do not edit.
 local config = require("longway.config")
 local notify = require("longway.ui.notify")
 local M = {}
@@ -10,7 +10,7 @@ M["check-snacks"] = function()
   end
   return ok
 end
-local function find_local_file(shortcut_id, shortcut_type)
+M["find-local-file"] = function(shortcut_id, shortcut_type)
   local dir
   if (shortcut_type == "epic") then
     dir = config["get-epics-dir"]()
@@ -25,7 +25,7 @@ local function find_local_file(shortcut_id, shortcut_type)
     return nil
   end
 end
-local function build_picker_layout()
+M["build-picker-layout"] = function()
   local cfg = config.get()
   local picker_cfg = (cfg.picker or {})
   local _4_
@@ -36,14 +36,14 @@ local function build_picker_layout()
   end
   return {preset = (picker_cfg.layout or "default"), preview = _4_}
 end
-local function truncate(s, max_len)
+M.truncate = function(s, max_len)
   if (not s or (#s <= max_len)) then
     return (s or "")
   else
     return (string.sub(s, 1, (max_len - 3)) .. "...")
   end
 end
-local function first_line(s)
+M["first-line"] = function(s)
   if not s then
     return ""
   else
@@ -88,7 +88,7 @@ M["pick-stories"] = function(opts)
     local items = {}
     if result.ok then
       for i, story in ipairs((result.data or {})) do
-        local file = find_local_file(story.id, "story")
+        local file = M["find-local-file"](story.id, "story")
         local state = (story.workflow_state_name or "")
         local owner_names
         do
@@ -137,7 +137,7 @@ M["pick-stories"] = function(opts)
       return nil
     end
   end
-  return Snacks.picker({source = "longway_stories", title = "Longway Stories", layout = build_picker_layout(), finder = _16_, format = _19_, confirm = _22_})
+  return Snacks.picker({source = "longway_stories", title = "Longway Stories", layout = M["build-picker-layout"](), finder = _16_, format = _19_, confirm = _22_})
 end
 M["pick-epics"] = function(opts)
   local Snacks = require("snacks")
@@ -147,7 +147,7 @@ M["pick-epics"] = function(opts)
     local items = {}
     if result.ok then
       for i, epic in ipairs((result.data or {})) do
-        local file = find_local_file(epic.id, "epic")
+        local file = M["find-local-file"](epic.id, "epic")
         local state = (epic.state or "")
         local stats = (epic.stats or {})
         local done = (stats.num_stories_done or 0)
@@ -185,7 +185,7 @@ M["pick-epics"] = function(opts)
       return nil
     end
   end
-  return Snacks.picker({source = "longway_epics", title = "Longway Epics", layout = build_picker_layout(), finder = _25_, format = _27_, confirm = _29_})
+  return Snacks.picker({source = "longway_epics", title = "Longway Epics", layout = M["build-picker-layout"](), finder = _25_, format = _27_, confirm = _29_})
 end
 M["pick-presets"] = function()
   local Snacks = require("snacks")
@@ -236,7 +236,7 @@ M["pick-presets"] = function()
         return nil
       end
     end
-    return Snacks.picker({source = "longway_presets", title = "Longway Presets", layout = build_picker_layout(), items = items, format = _35_, confirm = _37_})
+    return Snacks.picker({source = "longway_presets", title = "Longway Presets", layout = M["build-picker-layout"](), items = items, format = _35_, confirm = _37_})
   end
 end
 M["pick-modified"] = function(opts)
@@ -328,7 +328,7 @@ M["pick-modified"] = function(opts)
       return nil
     end
   end
-  return Snacks.picker({source = "longway_modified", title = "Longway Modified Files", layout = build_picker_layout(), finder = _40_, format = _48_, win = {input = {keys = {["<C-p>"] = {fn = _50_, mode = {"n", "i"}, desc = "Push selected file"}}}}, confirm = _52_})
+  return Snacks.picker({source = "longway_modified", title = "Longway Modified Files", layout = M["build-picker-layout"](), finder = _40_, format = _48_, win = {input = {keys = {["<C-p>"] = {fn = _50_, mode = {"n", "i"}, desc = "Push selected file"}}}}, confirm = _52_})
 end
 M["pick-comments"] = function(opts)
   local Snacks = require("snacks")
@@ -352,8 +352,8 @@ M["pick-comments"] = function(opts)
           local author_name = (members["resolve-name"](cmt.author_id) or "Unknown")
           local timestamp = (cmt.created_at or "")
           local body = (cmt.text or "")
-          local fl = first_line(body)
-          local text = string.format("%s \226\128\148 %s", author_name, truncate(fl, 60))
+          local fl = M["first-line"](body)
+          local text = string.format("%s \226\128\148 %s", author_name, M.truncate(fl, 60))
           table.insert(items, {text = text, idx = i, id = cmt.id, author = author_name, created_at = timestamp, body = body, preview = {text = string.format("**%s** \194\183 %s\n\n%s", author_name, timestamp, body), ft = "markdown"}})
         end
       else
@@ -363,8 +363,8 @@ M["pick-comments"] = function(opts)
     local function _56_(item, picker)
       local ret = {}
       table.insert(ret, {(item.author or ""), "SnacksPickerLabel"})
-      table.insert(ret, {(" \194\183 " .. truncate((item.created_at or ""), 16)), "Comment"})
-      table.insert(ret, {(" \226\128\148 " .. truncate(first_line((item.body or "")), 50)), "Normal"})
+      table.insert(ret, {(" \194\183 " .. M.truncate((item.created_at or ""), 16)), "Comment"})
+      table.insert(ret, {(" \226\128\148 " .. M.truncate(M["first-line"]((item.body or "")), 50)), "Normal"})
       return ret
     end
     local function _57_(picker, item)
@@ -386,7 +386,7 @@ M["pick-comments"] = function(opts)
         return nil
       end
     end
-    return Snacks.picker({source = "longway_comments", title = string.format("Comments \226\128\148 Story %s", tostring(shortcut_id)), layout = build_picker_layout(), finder = _54_, format = _56_, confirm = _57_})
+    return Snacks.picker({source = "longway_comments", title = string.format("Comments \226\128\148 Story %s", tostring(shortcut_id)), layout = M["build-picker-layout"](), finder = _54_, format = _56_, confirm = _57_})
   end
 end
 return M

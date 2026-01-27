@@ -18,7 +18,7 @@
       (notify.error "snacks.nvim is required for :LongwayPicker. Install folke/snacks.nvim"))
     ok))
 
-(fn find-local-file [shortcut-id shortcut-type]
+(fn M.find-local-file [shortcut-id shortcut-type]
   "Search workspace for existing markdown file matching shortcut_id.
    Uses glob to find files like {id}-*.md in the appropriate directory.
    Returns: filepath or nil"
@@ -30,7 +30,7 @@
     (when (> (length matches) 0)
       (. matches 1))))
 
-(fn build-picker-layout []
+(fn M.build-picker-layout []
   "Build layout config from user config.picker settings.
    Returns: snacks layout table"
   (let [cfg (config.get)
@@ -38,13 +38,13 @@
     {:preset (or picker-cfg.layout "default")
      :preview (if (= picker-cfg.preview false) false true)}))
 
-(fn truncate [s max-len]
+(fn M.truncate [s max-len]
   "Truncate a string to max-len, appending ... if needed"
   (if (or (not s) (<= (length s) max-len))
       (or s "")
       (.. (string.sub s 1 (- max-len 3)) "...")))
 
-(fn first-line [s]
+(fn M.first-line [s]
   "Get the first non-empty line of a string"
   (if (not s) ""
       (let [line (string.match s "^%s*(.-)%s*$")]
@@ -72,13 +72,13 @@
                   "")]
     (Snacks.picker {:source "longway_stories"
                     :title "Longway Stories"
-                    :layout (build-picker-layout)
+                    :layout (M.build-picker-layout)
                     :finder (fn [finder-opts ctx]
                               (let [result (search-api.search-stories-all query {:max_results 100})
                                     items []]
                                 (when result.ok
                                   (each [i story (ipairs (or result.data []))]
-                                    (let [file (find-local-file story.id "story")
+                                    (let [file (M.find-local-file story.id "story")
                                           state (or story.workflow_state_name "")
                                           owner-names (let [names []]
                                                         (each [_ o (ipairs (or story.owners []))]
@@ -131,13 +131,13 @@
         epics-api (require :longway.api.epics)]
     (Snacks.picker {:source "longway_epics"
                     :title "Longway Epics"
-                    :layout (build-picker-layout)
+                    :layout (M.build-picker-layout)
                     :finder (fn [finder-opts ctx]
                               (let [result (epics-api.list)
                                     items []]
                                 (when result.ok
                                   (each [i epic (ipairs (or result.data []))]
-                                    (let [file (find-local-file epic.id "epic")
+                                    (let [file (M.find-local-file epic.id "epic")
                                           state (or epic.state "")
                                           stats (or epic.stats {})
                                           done (or stats.num_stories_done 0)
@@ -212,7 +212,7 @@
         (notify.warn "No presets configured")
         (Snacks.picker {:source "longway_presets"
                     :title "Longway Presets"
-                    :layout (build-picker-layout)
+                    :layout (M.build-picker-layout)
                     :items items
                     :format (fn [item picker]
                               (let [ret []]
@@ -240,7 +240,7 @@
         epics-dir (config.get-epics-dir)]
     (Snacks.picker {:source "longway_modified"
                     :title "Longway Modified Files"
-                    :layout (build-picker-layout)
+                    :layout (M.build-picker-layout)
                     :finder (fn [finder-opts ctx]
                               (let [items []
                                     ;; Gather all markdown files
@@ -329,7 +329,7 @@
         (notify.error "Not a longway-managed file")
         (Snacks.picker {:source "longway_comments"
                         :title (string.format "Comments — Story %s" (tostring shortcut-id))
-                        :layout (build-picker-layout)
+                        :layout (M.build-picker-layout)
                         :finder (fn [finder-opts ctx]
                                   (let [result (comments-api.list shortcut-id)
                                         items []]
@@ -338,8 +338,8 @@
                                         (let [author-name (or (members.resolve-name cmt.author_id) "Unknown")
                                               timestamp (or cmt.created_at "")
                                               body (or cmt.text "")
-                                              fl (first-line body)
-                                              text (string.format "%s — %s" author-name (truncate fl 60))]
+                                              fl (M.first-line body)
+                                              text (string.format "%s — %s" author-name (M.truncate fl 60))]
                                           (table.insert items {:text text
                                                                :idx i
                                                                :id cmt.id
@@ -355,8 +355,8 @@
                         :format (fn [item picker]
                                   (let [ret []]
                                     (table.insert ret [(or item.author "") "SnacksPickerLabel"])
-                                    (table.insert ret [(.. " · " (truncate (or item.created_at "") 16)) "Comment"])
-                                    (table.insert ret [(.. " — " (truncate (first-line (or item.body "")) 50)) "Normal"])
+                                    (table.insert ret [(.. " · " (M.truncate (or item.created_at "") 16)) "Comment"])
+                                    (table.insert ret [(.. " — " (M.truncate (M.first-line (or item.body "")) 50)) "Normal"])
                                     ret))
                         :confirm (fn [picker item]
                                    (picker:close)

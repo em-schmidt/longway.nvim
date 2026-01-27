@@ -15,7 +15,8 @@
 (fn refresh-buffer-vars [bufnr]
   "Parse frontmatter and update buffer variables for the given buffer.
    Sets vim.b.longway_id, vim.b.longway_type, vim.b.longway_state,
-   vim.b.longway_sync_status, vim.b.longway_conflict"
+   vim.b.longway_sync_status, vim.b.longway_conflict,
+   vim.b.longway_changed_sections, vim.b.longway_conflict_sections"
   (let [filepath (vim.api.nvim_buf_get_name bufnr)]
     ;; Only process markdown files
     (if (not (string.match filepath "%.md$"))
@@ -31,23 +32,31 @@
               (if (not shortcut-id)
                   ;; Not a longway file
                   (vim.api.nvim_buf_set_var bufnr "longway_id" vim.NIL)
-                  ;; Longway file — compute sync status
+                  ;; Longway file — compute sync status and changed sections
                   (let [diff (require :longway.sync.diff)
                         first-sync ((. diff "first-sync?") fm)
-                        sync-status (if first-sync
-                                        "new"
-                                        (let [has-conflict (not= fm.conflict_sections nil)]
-                                          (if has-conflict
-                                              "conflict"
-                                              (if ((. diff "any-local-change?") parsed)
-                                                  "modified"
-                                                  "synced"))))]
+                        changes (when (not first-sync)
+                                  ((. diff "detect-local-changes") parsed))
+                        changed-sections (let [sections []]
+                                           (when changes
+                                             (when changes.description (table.insert sections "description"))
+                                             (when changes.tasks (table.insert sections "tasks"))
+                                             (when changes.comments (table.insert sections "comments")))
+                                           sections)
+                        conflict-sections (or fm.conflict_sections vim.NIL)
+                        has-conflict (not= fm.conflict_sections nil)
+                        sync-status (if first-sync "new"
+                                        has-conflict "conflict"
+                                        (> (length changed-sections) 0) "modified"
+                                        "synced")]
                     (vim.api.nvim_buf_set_var bufnr "longway_id" shortcut-id)
                     (vim.api.nvim_buf_set_var bufnr "longway_type" (or fm.shortcut_type "story"))
                     (vim.api.nvim_buf_set_var bufnr "longway_state" (or fm.state ""))
                     (vim.api.nvim_buf_set_var bufnr "longway_sync_status" sync-status)
                     (vim.api.nvim_buf_set_var bufnr "longway_conflict"
-                                              (if fm.conflict_sections true false))))))))))
+                                              (if has-conflict true false))
+                    (vim.api.nvim_buf_set_var bufnr "longway_changed_sections" changed-sections)
+                    (vim.api.nvim_buf_set_var bufnr "longway_conflict_sections" conflict-sections)))))))))
 
 (fn get-buf-var [bufnr name]
   "Safely get a buffer variable, returning nil on error"
@@ -74,15 +83,20 @@
 (fn M.get-status-data []
   "Returns structured data for the current buffer, or nil if not a longway file.
    Returns: {:shortcut_id number :shortcut_type string :state string
-             :sync_status string :conflict bool}"
+             :sync_status string :changed_sections [string]
+             :conflict_sections [string]|nil}"
   (let [bufnr (vim.api.nvim_get_current_buf)
         id (get-buf-var bufnr "longway_id")]
     (when (and id (not= id vim.NIL))
-      {:shortcut_id id
-       :shortcut_type (or (get-buf-var bufnr "longway_type") "story")
-       :state (or (get-buf-var bufnr "longway_state") "")
-       :sync_status (or (get-buf-var bufnr "longway_sync_status") "unknown")
-       :conflict (or (get-buf-var bufnr "longway_conflict") false)})))
+      (let [raw-conflict (get-buf-var bufnr "longway_conflict_sections")
+            conflict-sections (when (and raw-conflict (not= raw-conflict vim.NIL))
+                                raw-conflict)]
+        {:shortcut_id id
+         :shortcut_type (or (get-buf-var bufnr "longway_type") "story")
+         :state (or (get-buf-var bufnr "longway_state") "")
+         :sync_status (or (get-buf-var bufnr "longway_sync_status") "unknown")
+         :changed_sections (or (get-buf-var bufnr "longway_changed_sections") [])
+         :conflict_sections conflict-sections}))))
 
 (fn M.lualine-component []
   "Returns a table compatible with lualine's component API.
