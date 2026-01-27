@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 longway.nvim is a Fennel-based Neovim plugin for bidirectional synchronization between [Shortcut](https://shortcut.com) and local markdown files. Users can pull stories/epics from Shortcut, edit them as markdown in Neovim, and push changes back.
 
-**Current Status:** Phase 4 complete (v0.4.0) - Comment synchronization with author resolution, timestamp formatting, and edit warnings
+**Current Status:** Phase 5 complete (v0.5.0) - Bidirectional sync with conflict detection, auto-push on save, and conflict resolution commands
 
 ## Build Commands
 
@@ -51,9 +51,12 @@ fnl/longway/           # Fennel source (edit these)
 │   └── search.fnl     # Search API
 ├── sync/
 │   ├── pull.fnl       # Fetch from API → markdown files
-│   ├── push.fnl       # Parse markdown → push to API
+│   ├── push.fnl       # Parse markdown → push to API (with conflict detection)
 │   ├── tasks.fnl      # Task diff, push, pull, merge logic
-│   └── comments.fnl   # Comment diff, push, pull logic
+│   ├── comments.fnl   # Comment diff, push, pull logic
+│   ├── diff.fnl       # Section-level change detection (local vs. frontmatter hashes)
+│   ├── resolve.fnl    # Conflict resolution strategies (local/remote/manual)
+│   └── auto.fnl       # Auto-push on save with debounce
 ├── markdown/
 │   ├── parser.fnl     # Parse markdown (frontmatter + sync sections)
 │   ├── renderer.fnl   # Convert API responses → markdown
@@ -114,10 +117,22 @@ Each entity type has one module owning all parsing and rendering:
 - Comments use `comments_hash` in frontmatter for change detection (parallel to `tasks_hash`)
 - Timestamp formatting uses `os.date` with `config.comments.timestamp_format` (strftime format)
 
+### Conflict Detection & Resolution (Phase 5)
+
+- All sync state lives in YAML frontmatter — no separate state files
+- `sync_hash`, `tasks_hash`, `comments_hash` track baseline hashes at last sync
+- `updated_at` tracks remote timestamp at last sync
+- `conflict_sections` (list or nil) tracks which sections have unresolved conflicts
+- Pre-push: `sync/diff.fnl` compares current content hashes vs. frontmatter hashes (local changes) and fetches remote `updated_at` (remote changes)
+- If both local and remote changed → conflict detected, `conflict_sections` set in frontmatter, user notified
+- Resolution via `:LongwayResolve local|remote|manual`
+- Auto-push on save: opt-in via `auto_push_on_save` config, debounced via `vim.uv.new_timer`, skips push when hashes match (prevents push-back loop after pull)
+
 ## Documentation
 
 - `docs/PRD.md` - Comprehensive product requirements and phase roadmap
 - `docs/TESTING_PRD.md` - Testing infrastructure plan
 - `docs/IMPLEMENTATION_PLAN.md` - Phase breakdown with tasks
 - `docs/PHASE_4_PLAN.md` - Phase 4 comment synchronization implementation plan
+- `docs/PHASE_5_PLAN.md` - Phase 5 bidirectional sync & conflicts implementation plan
 - `CONTRIBUTING.md` - Development setup guide

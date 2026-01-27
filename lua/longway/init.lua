@@ -18,7 +18,12 @@ M.setup = function(opts)
   if config.get().debug then
     print("longway.nvim initialized")
     print(string.format("  Workspace: %s", config["get-workspace-dir"]()))
-    return print(string.format("  Token configured: %s", tostring(config["is-configured"]())))
+    print(string.format("  Token configured: %s", tostring(config["is-configured"]())))
+  else
+  end
+  if config.get().auto_push_on_save then
+    local auto = require("longway.sync.auto")
+    return auto.setup()
   else
     return nil
   end
@@ -41,6 +46,7 @@ M.cache_refresh = core["cache-refresh"]
 M.cache_status = core["cache-status"]
 M.list_presets = core["list-presets"]
 M.get_info = core["get-info"]
+M.resolve = core.resolve
 M["get-config"] = config.get
 M["is-configured"] = config["is-configured"]
 M["get-presets"] = config["get-presets"]

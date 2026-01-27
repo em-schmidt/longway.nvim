@@ -127,6 +127,22 @@ end, {
   desc = 'List configured presets',
 })
 
+-- Phase 5: Resolve sync conflicts
+vim.api.nvim_create_user_command('LongwayResolve', function(opts)
+  local strategy = opts.args
+  if strategy == '' then
+    vim.notify('[longway] Usage: :LongwayResolve <local|remote|manual>', vim.log.levels.ERROR)
+    return
+  end
+  require('longway').resolve(strategy)
+end, {
+  nargs = 1,
+  complete = function()
+    return { 'local', 'remote', 'manual' }
+  end,
+  desc = 'Resolve sync conflict (local, remote, or manual)',
+})
+
 -- Legacy hello command for testing
 vim.api.nvim_create_user_command('LongwayHello', function()
   require('longway').hello()

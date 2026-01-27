@@ -10,6 +10,7 @@ local comments_md = require("longway.markdown.comments")
 local confirm = require("longway.ui.confirm")
 local hash = require("longway.util.hash")
 local frontmatter = require("longway.markdown.frontmatter")
+local diff = require("longway.sync.diff")
 local M = {}
 local function update_buffer_frontmatter(bufnr, new_fm_data)
   local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
@@ -96,13 +97,13 @@ local function push_story_comments(story_id, local_comments, opts)
     return {error = remote_result.error, ok = false}
   else
     local remote_comments = comments_md["format-api-comments"]((remote_result.data or {}))
-    local diff = comments_sync.diff(local_comments, remote_comments)
+    local diff0 = comments_sync.diff(local_comments, remote_comments)
     local has_changes = comments_sync["has-changes?"]
-    if (not has_changes(diff) and (#diff.edited == 0)) then
+    if (not has_changes(diff0) and (#diff0.edited == 0)) then
       return {ok = true, comments = local_comments}
     else
-      if ((#diff.deleted > 0) and cfg.comments.confirm_delete and not opts.skip_confirm) then
-        local delete_count = #diff.deleted
+      if ((#diff0.deleted > 0) and cfg.comments.confirm_delete and not opts.skip_confirm) then
+        local delete_count = #diff0.deleted
         local msg
         local function _7_()
           if (delete_count == 1) then
@@ -141,13 +142,13 @@ local function push_story_tasks(story_id, local_tasks, opts)
     return {error = story_result.error, ok = false}
   else
     local remote_tasks = (story_result.data.tasks or {})
-    local diff = tasks_sync.diff(local_tasks, remote_tasks)
+    local diff0 = tasks_sync.diff(local_tasks, remote_tasks)
     local has_changes = tasks_sync["has-changes?"]
-    if not has_changes(diff) then
+    if not has_changes(diff0) then
       return {ok = true, tasks = local_tasks}
     else
-      if ((#diff.deleted > 0) and cfg.tasks.confirm_delete and not opts.skip_confirm) then
-        local delete_count = #diff.deleted
+      if ((#diff0.deleted > 0) and cfg.tasks.confirm_delete and not opts.skip_confirm) then
+        local delete_count = #diff0.deleted
         local msg
         local function _13_()
           if (delete_count == 1) then
@@ -170,10 +171,66 @@ local function push_story_tasks(story_id, local_tasks, opts)
     end
   end
 end
+local function check_remote_before_push(story_id, parsed)
+  local first_sync_3f = diff["first-sync?"]
+  if first_sync_3f(parsed.frontmatter) then
+    return {ok = true, conflict = false}
+  else
+    local remote_result = stories_api.get(story_id)
+    if not remote_result.ok then
+      return {error = remote_result.error, ok = false}
+    else
+      local classification = diff.classify(parsed, remote_result.data.updated_at)
+      return {ok = true, conflict = (classification.status == "conflict"), classification = classification, ["remote-story"] = remote_result.data}
+    end
+  end
+end
 M["push-story"] = function(story_id, parsed, opts)
   local opts0 = (opts or {})
   local cfg = config.get()
   local bufnr = (opts0.bufnr or vim.api.nvim_get_current_buf())
+  local and_20_ = not opts0.force
+  if and_20_ then
+    local _21_
+    do
+      local first_sync_3f = diff["first-sync?"]
+      _21_ = first_sync_3f(parsed.frontmatter)
+    end
+    and_20_ = not _21_
+  end
+  if and_20_ then
+    local check_result = check_remote_before_push(story_id, parsed)
+    if not check_result.ok then
+      return {error = check_result.error, ok = false}
+    else
+      if check_result.conflict then
+        local classification = check_result.classification
+        local changed_sections = {}
+        if classification.local_changes.description then
+          table.insert(changed_sections, "description")
+        else
+        end
+        if classification.local_changes.tasks then
+          table.insert(changed_sections, "tasks")
+        else
+        end
+        if classification.local_changes.comments then
+          table.insert(changed_sections, "comments")
+        else
+        end
+        update_buffer_frontmatter(bufnr, {conflict_sections = changed_sections})
+        notify["conflict-detected"](story_id)
+        return {conflict = true, sections = changed_sections, ok = false}
+      else
+        return M["do-push"](story_id, parsed, opts0, bufnr)
+      end
+    end
+  else
+    return M["do-push"](story_id, parsed, opts0, bufnr)
+  end
+end
+M["do-push"] = function(story_id, parsed, opts, bufnr)
+  local cfg = config.get()
   local errors = {}
   local results = {}
   notify["push-started"]()
@@ -186,9 +243,9 @@ M["push-story"] = function(story_id, parsed, opts)
     else
     end
   end
-  if (cfg.sync_sections.tasks and (opts0.sync_tasks or (opts0.sync_tasks ~= false))) then
+  if (cfg.sync_sections.tasks and (opts.sync_tasks or (opts.sync_tasks ~= false))) then
     local local_tasks = (parsed.tasks or {})
-    local tasks_result = push_story_tasks(story_id, local_tasks, opts0)
+    local tasks_result = push_story_tasks(story_id, local_tasks, opts)
     results.tasks = tasks_result
     if tasks_result.ok then
       local result_tasks = (tasks_result.tasks or {})
@@ -203,9 +260,9 @@ M["push-story"] = function(story_id, parsed, opts)
     end
   else
   end
-  if (cfg.sync_sections.comments and (opts0.sync_comments or (opts0.sync_comments ~= false))) then
+  if (cfg.sync_sections.comments and (opts.sync_comments or (opts.sync_comments ~= false))) then
     local local_comments = (parsed.comments or {})
-    local comments_result = push_story_comments(story_id, local_comments, opts0)
+    local comments_result = push_story_comments(story_id, local_comments, opts)
     results.comments = comments_result
     if comments_result.ok then
       local result_comments = (comments_result.comments or {})
@@ -221,6 +278,16 @@ M["push-story"] = function(story_id, parsed, opts)
   else
   end
   if (#errors == 0) then
+    do
+      local content_hash = hash["content-hash"]
+      local fm_update = {sync_hash = content_hash((parsed.description or ""))}
+      if (results.description and results.description.story) then
+        fm_update["updated_at"] = results.description.story.updated_at
+      else
+      end
+      fm_update["conflict_sections"] = nil
+      update_buffer_frontmatter(bufnr, fm_update)
+    end
     notify["push-completed"]()
     return {ok = true, results = results}
   else
