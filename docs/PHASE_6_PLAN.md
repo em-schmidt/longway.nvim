@@ -37,9 +37,7 @@ Phase 5 (Bidirectional Sync & Conflicts) is complete. The codebase has partial s
 
 ### Dependency: snacks.nvim
 
-Phase 6 adds `folke/snacks.nvim` as a **required** runtime dependency (alongside plenary.nvim). The PRD lists it under Dependencies:
-
-> **Required:** `plenary.nvim`, `folke/snacks.nvim` — Picker UI, notifications, and utilities
+Phase 6 uses `folke/snacks.nvim` as an **optional** runtime dependency. The picker (`:LongwayPicker`) and enhanced notifications require it, but all other functionality works without it — notifications fall back to `vim.notify`.
 
 snacks.nvim provides:
 - `Snacks.picker` — Fuzzy finder with custom sources, formatters, previewers, and actions
