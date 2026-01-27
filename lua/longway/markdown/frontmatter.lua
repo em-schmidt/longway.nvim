@@ -1,9 +1,14 @@
 -- [nfnl] fnl/longway/markdown/frontmatter.fnl
 local M = {}
+local function nil_value_3f(value)
+  return ((value == nil) or ((type(value) == "userdata") and (value == vim.NIL)))
+end
 local function serialize_value(value, indent)
   local indent0 = (indent or 0)
   local spaces = string.rep("  ", indent0)
-  if (type(value) == "string") then
+  if nil_value_3f(value) then
+    return "null"
+  elseif (type(value) == "string") then
     if (string.find(value, "\n") or string.find(value, ":") or string.find(value, "\"") or string.find(value, "'")) then
       return ("\"" .. string.gsub(value, "\"", "\\\"") .. "\"")
     else
@@ -21,8 +26,6 @@ local function serialize_value(value, indent)
     else
       return "false"
     end
-  elseif (type(value) == "nil") then
-    return "null"
   elseif (type(value) == "table") then
     if vim.islist(value) then
       local items = {}
@@ -50,7 +53,7 @@ M.generate = function(data)
   local lines = {"---"}
   for key, value in pairs(data) do
     local k = tostring(key)
-    if not string.match(k, "^_") then
+    if (not string.match(k, "^_") and not nil_value_3f(value)) then
       if (type(value) == "table") then
         if vim.islist(value) then
           table.insert(lines, (k .. ":"))
@@ -58,16 +61,25 @@ M.generate = function(data)
             if (type(v) == "table") then
               table.insert(lines, "  -")
               for ik, iv in pairs(v) do
-                table.insert(lines, ("    " .. tostring(ik) .. ": " .. serialize_value(iv, 2)))
+                if not nil_value_3f(iv) then
+                  table.insert(lines, ("    " .. tostring(ik) .. ": " .. serialize_value(iv, 2)))
+                else
+                end
               end
             else
-              table.insert(lines, ("  - " .. serialize_value(v, 1)))
+              if not nil_value_3f(v) then
+                table.insert(lines, ("  - " .. serialize_value(v, 1)))
+              else
+              end
             end
           end
         else
           table.insert(lines, (k .. ":"))
           for ik, iv in pairs(value) do
-            table.insert(lines, ("  " .. tostring(ik) .. ": " .. serialize_value(iv, 1)))
+            if not nil_value_3f(iv) then
+              table.insert(lines, ("  " .. tostring(ik) .. ": " .. serialize_value(iv, 1)))
+            else
+            end
           end
         end
       else

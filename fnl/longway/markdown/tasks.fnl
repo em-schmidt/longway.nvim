@@ -6,6 +6,14 @@
 
 (local M {})
 
+(fn nil-safe [value fallback]
+  "Return fallback if value is nil or vim.NIL (userdata from JSON null).
+   Defaults fallback to nil."
+  (if (or (= value nil)
+          (and (= (type value) :userdata) (= value vim.NIL)))
+      fallback
+      value))
+
 ;;; ============================================================================
 ;;; Task Parsing
 ;;; ============================================================================
@@ -127,15 +135,18 @@
         (if task.owner_mention
             (.. " @" task.owner_mention)
             ;; Try to resolve from owner_ids
-            (if (and task.owner_ids (> (length task.owner_ids) 0))
-                (let [first-owner (. task.owner_ids 1)
-                      member (members.find-by-id first-owner)]
-                  (if (and member member.profile member.profile.mention_name)
-                      (.. " @" member.profile.mention_name)
-                      (if (and member member.profile member.profile.name)
-                          (.. " @" (string.gsub member.profile.name " " "_"))
-                          "")))
-                "")))))
+            (let [owner-ids (nil-safe task.owner_ids)]
+              (if (and owner-ids (> (length owner-ids) 0))
+                  (let [first-owner (. owner-ids 1)
+                        member (members.find-by-id first-owner)]
+                    (if (and member member.profile
+                             (nil-safe member.profile.mention_name))
+                        (.. " @" member.profile.mention_name)
+                        (if (and member member.profile
+                                 (nil-safe member.profile.name))
+                            (.. " @" (string.gsub member.profile.name " " "_"))
+                            "")))
+                  ""))))))
 
 (fn M.render-task [task]
   "Render a single task as a markdown checkbox line
@@ -184,18 +195,19 @@
    Returns: [{:id :description :complete :is_new :owner_ids :owner_mention :position}]"
   (let [formatted []]
     (each [i task (ipairs (or raw-tasks []))]
-      (let [owner-mention (when (and task.owner_ids (> (length task.owner_ids) 0))
-                            (let [owner-name (M.resolve-owner-id (. task.owner_ids 1))]
+      (let [owner-ids (nil-safe task.owner_ids [])
+            owner-mention (when (and owner-ids (> (length owner-ids) 0))
+                            (let [owner-name (M.resolve-owner-id (. owner-ids 1))]
                               (when owner-name
                                 (string.gsub owner-name " " "_"))))]
         (table.insert formatted
                       {:id task.id
-                       :description task.description
-                       :complete task.complete
+                       :description (nil-safe task.description "")
+                       :complete (nil-safe task.complete false)
                        :is_new false
-                       :owner_ids (or task.owner_ids [])
+                       :owner_ids owner-ids
                        :owner_mention owner-mention
-                       :position (or task.position i)})))
+                       :position (nil-safe task.position i)})))
     formatted))
 
 ;;; ============================================================================

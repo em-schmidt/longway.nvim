@@ -87,7 +87,37 @@ local function _1_()
       assert.has_substring(result, "- bug")
       return assert.has_substring(result, "- urgent")
     end
-    return it("handles array values", _15_)
+    it("handles array values", _15_)
+    local function _16_()
+      local data = {shortcut_id = 12345, estimate = vim.NIL, state = "active"}
+      local result = frontmatter.generate(data)
+      assert.has_substring(result, "shortcut_id: 12345")
+      assert.has_substring(result, "state: active")
+      return assert.is_nil(string.find(result, "estimate"))
+    end
+    it("omits vim.NIL values from output", _16_)
+    local function _17_()
+      local data = {stats = {num_stories = 10, num_points = vim.NIL}}
+      local result = frontmatter.generate(data)
+      assert.has_substring(result, "num_stories: 10")
+      return assert.is_nil(string.find(result, "num_points"))
+    end
+    it("omits vim.NIL values in nested object fields", _17_)
+    local function _18_()
+      local data = {items = {"keep", vim.NIL, "also_keep"}}
+      local result = frontmatter.generate(data)
+      assert.has_substring(result, "- keep")
+      return assert.has_substring(result, "- also_keep")
+    end
+    it("omits vim.NIL items in arrays", _18_)
+    local function _19_()
+      local data = {owners = {{name = "Alice", id = "uuid-1"}, {name = vim.NIL, id = "uuid-2"}}}
+      local result = frontmatter.generate(data)
+      assert.has_substring(result, "name: Alice")
+      assert.has_substring(result, "id: uuid-1")
+      return assert.has_substring(result, "id: uuid-2")
+    end
+    return it("omits vim.NIL values in array-of-objects", _19_)
   end
   return describe("generate", _9_)
 end

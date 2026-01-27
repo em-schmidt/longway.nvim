@@ -61,6 +61,13 @@
       (let [cmt (M.parse-block block)]
         (when cmt
           (table.insert comments cmt))))
+    ;; Warn when content exists but no comments were parsed (likely format issue)
+    (when (and (= (length comments) 0)
+               (string.match content "%S"))
+      (let [(ok notify) (pcall require :longway.ui.notify)]
+        (when ok
+          (notify.warn
+            "Comments section has content but no comments were parsed. Expected format: **Author** · YYYY-MM-DD HH:MM <!-- comment:new -->"))))
     comments))
 
 ;;; ============================================================================

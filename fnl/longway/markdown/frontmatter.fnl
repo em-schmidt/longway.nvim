@@ -2,11 +2,18 @@
 
 (local M {})
 
+(fn nil-value? [value]
+  "Check if a value is nil or vim.NIL (userdata returned by JSON null decoding)"
+  (or (= value nil)
+      (and (= (type value) :userdata) (= value vim.NIL))))
+
 (fn serialize-value [value indent]
   "Serialize a Lua value to YAML string"
   (let [indent (or indent 0)
         spaces (string.rep "  " indent)]
-    (if (= (type value) "string")
+    (if (nil-value? value)
+        "null"
+        (= (type value) "string")
         (if (or (string.find value "\n")
                 (string.find value ":")
                 (string.find value "\"")
@@ -19,8 +26,6 @@
         (tostring value)
         (= (type value) "boolean")
         (if value "true" "false")
-        (= (type value) "nil")
-        "null"
         (= (type value) "table")
         (if (vim.islist value)
             ;; Array
@@ -44,8 +49,9 @@
   (let [lines ["---"]]
     (each [key value (pairs data)]
       (let [k (tostring key)]
-        ;; Skip internal fields starting with _
-        (when (not (string.match k "^_"))
+        ;; Skip internal fields starting with _ and vim.NIL values
+        (when (and (not (string.match k "^_"))
+                   (not (nil-value? value)))
           (if (= (type value) "table")
               (if (vim.islist value)
                   (do
@@ -55,12 +61,15 @@
                           (do
                             (table.insert lines "  -")
                             (each [ik iv (pairs v)]
-                              (table.insert lines (.. "    " (tostring ik) ": " (serialize-value iv 2)))))
-                          (table.insert lines (.. "  - " (serialize-value v 1))))))
+                              (when (not (nil-value? iv))
+                                (table.insert lines (.. "    " (tostring ik) ": " (serialize-value iv 2))))))
+                          (when (not (nil-value? v))
+                            (table.insert lines (.. "  - " (serialize-value v 1)))))))
                   (do
                     (table.insert lines (.. k ":"))
                     (each [ik iv (pairs value)]
-                      (table.insert lines (.. "  " (tostring ik) ": " (serialize-value iv 1))))))
+                      (when (not (nil-value? iv))
+                        (table.insert lines (.. "  " (tostring ik) ": " (serialize-value iv 1)))))))
               (table.insert lines (.. k ": " (serialize-value value 0)))))))
     (table.insert lines "---")
     (table.concat lines "\n")))

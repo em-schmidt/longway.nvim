@@ -2,6 +2,7 @@
 local config = require("longway.config")
 local frontmatter = require("longway.markdown.frontmatter")
 local tasks_md = require("longway.markdown.tasks")
+local comments_md = require("longway.markdown.comments")
 local M = {}
 local function get_sync_markers(section_name)
   local cfg = config.get()
@@ -30,54 +31,12 @@ M["extract-tasks"] = function(content)
     return tasks_md["parse-section"](tasks_content)
   end
 end
-local function parse_comment_block(block)
-  local header_pattern = "%*%*(.-)%*%*%s*\194\183%s*([%d%-]+%s*[%d:]+)%s*<!%-%-%s*comment:(%S+)%s*%-%->"
-  local lines = {}
-  local found_header = false
-  local header_line = nil
-  for line in string.gmatch((block .. "\n"), "([^\n]*)\n") do
-    if not found_header then
-      local author, timestamp, id = string.match(line, header_pattern)
-      if author then
-        found_header = true
-        local _3_
-        if (id == "new") then
-          _3_ = nil
-        else
-          _3_ = tonumber(id)
-        end
-        header_line = {author = author, timestamp = timestamp, id = _3_, is_new = (id == "new")}
-      else
-      end
-    else
-      if ((#lines > 0) or not string.match(line, "^%s*$")) then
-        table.insert(lines, line)
-      else
-      end
-    end
-  end
-  if header_line then
-    header_line.text = table.concat(lines, "\n")
-    return header_line
-  else
-    return nil
-  end
-end
 M["extract-comments"] = function(content)
   local comments_content = extract_sync_section(content, "comments")
   if not comments_content then
     return {}
   else
-    local comments = {}
-    local blocks = vim.split(comments_content, "\n%-%-%-\n", {trimempty = true, plain = false})
-    for _, block in ipairs(blocks) do
-      local cmt = parse_comment_block(block)
-      if cmt then
-        table.insert(comments, cmt)
-      else
-      end
-    end
-    return comments
+    return comments_md["parse-section"](comments_content)
   end
 end
 M.parse = function(content)

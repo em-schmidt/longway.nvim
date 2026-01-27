@@ -113,4 +113,36 @@ body"
                   result (frontmatter.generate data)]
               (assert.has_substring result "labels:")
               (assert.has_substring result "- bug")
-              (assert.has_substring result "- urgent"))))))))
+              (assert.has_substring result "- urgent"))))
+
+        (it "omits vim.NIL values from output"
+          (fn []
+            (let [data {:shortcut_id 12345 :estimate vim.NIL :state "active"}
+                  result (frontmatter.generate data)]
+              (assert.has_substring result "shortcut_id: 12345")
+              (assert.has_substring result "state: active")
+              ;; vim.NIL value should be omitted entirely
+              (assert.is_nil (string.find result "estimate")))))
+
+        (it "omits vim.NIL values in nested object fields"
+          (fn []
+            (let [data {:stats {:num_stories 10 :num_points vim.NIL}}
+                  result (frontmatter.generate data)]
+              (assert.has_substring result "num_stories: 10")
+              (assert.is_nil (string.find result "num_points")))))
+
+        (it "omits vim.NIL items in arrays"
+          (fn []
+            (let [data {:items ["keep" vim.NIL "also_keep"]}
+                  result (frontmatter.generate data)]
+              (assert.has_substring result "- keep")
+              (assert.has_substring result "- also_keep"))))
+
+        (it "omits vim.NIL values in array-of-objects"
+          (fn []
+            (let [data {:owners [{:name "Alice" :id "uuid-1"} {:name vim.NIL :id "uuid-2"}]}
+                  result (frontmatter.generate data)]
+              (assert.has_substring result "name: Alice")
+              (assert.has_substring result "id: uuid-1")
+              ;; The second owner should have id but no name
+              (assert.has_substring result "id: uuid-2"))))))))

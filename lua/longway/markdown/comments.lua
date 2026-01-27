@@ -60,6 +60,14 @@ M["parse-section"] = function(content)
     else
     end
   end
+  if ((#comments == 0) and string.match(content, "%S")) then
+    local ok, notify = pcall(require, "longway.ui.notify")
+    if ok then
+      notify.warn("Comments section has content but no comments were parsed. Expected format: **Author** \194\183 YYYY-MM-DD HH:MM <!-- comment:new -->")
+    else
+    end
+  else
+  end
   return comments
 end
 M["resolve-author-name"] = function(author_id)

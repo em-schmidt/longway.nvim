@@ -6,35 +6,48 @@ local slug = require("longway.util.slug")
 local tasks_md = require("longway.markdown.tasks")
 local comments_md = require("longway.markdown.comments")
 local M = {}
+local function nil_safe(value, fallback)
+  if ((value == nil) or ((type(value) == "userdata") and (value == vim.NIL))) then
+    return fallback
+  else
+    return value
+  end
+end
 local function generate_story_filename(story)
   return slug["make-filename"](story.id, story.name, "story")
 end
 local function build_story_frontmatter(story)
-  local fm = {shortcut_id = story.id, shortcut_type = "story", shortcut_url = story.app_url, story_type = story.story_type, state = story.workflow_state_name, created_at = story.created_at, updated_at = story.updated_at}
-  if story.epic_id then
-    fm.epic_id = story.epic_id
-  else
+  local fm = {shortcut_id = story.id, shortcut_type = "story", shortcut_url = nil_safe(story.app_url), story_type = nil_safe(story.story_type), state = nil_safe(story.workflow_state_name), created_at = nil_safe(story.created_at), updated_at = nil_safe(story.updated_at)}
+  do
+    local epic_id = nil_safe(story.epic_id)
+    local iteration_id = nil_safe(story.iteration_id)
+    local group_id = nil_safe(story.group_id)
+    local estimate = nil_safe(story.estimate)
+    if epic_id then
+      fm.epic_id = epic_id
+    else
+    end
+    if iteration_id then
+      fm.iteration_id = iteration_id
+    else
+    end
+    if group_id then
+      fm.team_id = group_id
+    else
+    end
+    if estimate then
+      fm.estimate = estimate
+    else
+    end
   end
-  if story.iteration_id then
-    fm.iteration_id = story.iteration_id
-  else
-  end
-  if story.group_id then
-    fm.team_id = story.group_id
-  else
-  end
-  if story.estimate then
-    fm.estimate = story.estimate
-  else
-  end
-  if (story.owners and (#story.owners > 0)) then
+  if (story.owners and (type(story.owners) ~= "userdata") and (#story.owners > 0)) then
     fm.owners = {}
     for _, owner in ipairs(story.owners) do
-      table.insert(fm.owners, {name = owner.profile.name, id = owner.id})
+      table.insert(fm.owners, {name = nil_safe(owner.profile.name, "Unknown"), id = owner.id})
     end
   else
   end
-  if (story.labels and (#story.labels > 0)) then
+  if (story.labels and (type(story.labels) ~= "userdata") and (#story.labels > 0)) then
     fm.labels = {}
     for _, label in ipairs(story.labels) do
       table.insert(fm.labels, label.name)
@@ -105,14 +118,15 @@ M["render-story"] = function(story)
   return (frontmatter.generate(fm_data) .. "\n\n" .. body)
 end
 local function build_epic_frontmatter(epic)
-  return {shortcut_id = epic.id, shortcut_type = "epic", shortcut_url = epic.app_url, state = epic.state, planned_start_date = epic.planned_start_date, deadline = epic.deadline, created_at = epic.created_at, updated_at = epic.updated_at, sync_hash = "", local_updated_at = os.date("!%Y-%m-%dT%H:%M:%SZ"), stats = (epic.stats or {})}
+  local stats = nil_safe(epic.stats, {})
+  return {shortcut_id = epic.id, shortcut_type = "epic", shortcut_url = nil_safe(epic.app_url), state = nil_safe(epic.state), planned_start_date = nil_safe(epic.planned_start_date), deadline = nil_safe(epic.deadline), created_at = nil_safe(epic.created_at), updated_at = nil_safe(epic.updated_at), sync_hash = "", local_updated_at = os.date("!%Y-%m-%dT%H:%M:%SZ"), stats = stats}
 end
 local function render_story_link(story)
   local filename = generate_story_filename(story)
   return string.format("[%s](../stories/%s)", story.name, filename)
 end
 local function render_story_state_badge(story)
-  local state = (story.workflow_state_name or "Unknown")
+  local state = nil_safe(story.workflow_state_name, "Unknown")
   if string.find(string.lower(state), "done") then
     return ("\226\156\147 " .. state)
   elseif string.find(string.lower(state), "progress") then
@@ -122,15 +136,17 @@ local function render_story_state_badge(story)
   end
 end
 local function render_epic_stats(epic)
-  local stats = (epic.stats or {})
-  local function _12_()
-    if (stats.num_stories and (stats.num_stories > 0)) then
-      return math.floor((((stats.num_stories_done or 0) / stats.num_stories) * 100))
+  local stats = nil_safe(epic.stats, {})
+  local num_done = nil_safe(stats.num_stories_done, 0)
+  local num_total = nil_safe(stats.num_stories, 0)
+  local function _13_()
+    if (num_total and (num_total > 0)) then
+      return math.floor(((num_done / num_total) * 100))
     else
       return 0
     end
   end
-  return string.format("**Progress:** %d/%d stories done (%d%%)", (stats.num_stories_done or 0), (stats.num_stories or 0), _12_())
+  return string.format("**Progress:** %d/%d stories done (%d%%)", num_done, num_total, _13_())
 end
 M["render-epic"] = function(epic, stories)
   local fm_data = build_epic_frontmatter(epic)
@@ -142,29 +158,32 @@ M["render-epic"] = function(epic, stories)
     table.insert(sections, "| Status | Title | State | Owner | Points |")
     table.insert(sections, "|:------:|-------|-------|-------|-------:|")
     for _, story in ipairs(stories) do
+      local owners = nil_safe(story.owners)
       local owner_name
-      if (story.owners and (#story.owners > 0)) then
-        owner_name = story.owners[1].profile.name
+      if (owners and (#owners > 0)) then
+        owner_name = nil_safe(owners[1].profile.name, "-")
       else
         owner_name = "-"
       end
-      local points = (story.estimate or "-")
+      local points = nil_safe(story.estimate, "-")
+      local completed = nil_safe(story.completed)
+      local started = nil_safe(story.started)
       local status_icon
-      if story.completed then
+      if completed then
         status_icon = "\226\156\147"
-      elseif story.started then
+      elseif started then
         status_icon = "\226\134\146"
       else
         status_icon = "\226\151\139"
       end
       local story_link = render_story_link(story)
-      table.insert(sections, string.format("| %s | %s | %s | %s | %s |", status_icon, story_link, (story.workflow_state_name or "-"), owner_name, points))
+      table.insert(sections, string.format("| %s | %s | %s | %s | %s |", status_icon, story_link, nil_safe(story.workflow_state_name, "-"), owner_name, points))
     end
   else
   end
-  if epic.milestone_id then
+  if nil_safe(epic.milestone_id) then
     table.insert(sections, "")
-    table.insert(sections, string.format("**Milestone:** %s", (epic.milestone_id or "-")))
+    table.insert(sections, string.format("**Milestone:** %s", nil_safe(epic.milestone_id, "-")))
   else
   end
   table.insert(sections, "")
