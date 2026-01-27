@@ -50,6 +50,16 @@
       (let [line (string.match s "^%s*(.-)%s*$")]
         (or (string.match line "^([^\n]+)") ""))))
 
+(fn item-preview [ctx]
+  "Preview handler that dispatches based on item.preview value.
+   Delegates to Snacks built-in file previewer for items with file,
+   or the built-in preview previewer for items with text preview data."
+  (let [preview-mod (require :snacks.picker.preview)
+        item ctx.item]
+    (if (and item item.file)
+        (preview-mod.file ctx)
+        (preview-mod.preview ctx))))
+
 ;; ---------------------------------------------------------------------------
 ;; Source: Stories
 ;; ---------------------------------------------------------------------------
@@ -59,6 +69,7 @@
    opts: {:query string :preset string}"
   (let [Snacks (require :snacks)
         search-api (require :longway.api.search)
+        stories-api (require :longway.api.stories)
         opts (or opts {})
         ;; Determine query
         query (or opts.query
@@ -68,24 +79,46 @@
                   (let [default (config.get-default-preset)]
                     (when default
                       (let [preset (config.get-preset default)]
-                        (when preset preset.query))))
-                  "")]
+                        (when preset preset.query)))))]
     (Snacks.picker {:source "longway_stories"
                     :title "Longway Stories"
                     :layout (M.build-picker-layout)
-                    :preview "preview"
+                    :preview item-preview
                     :finder (fn [finder-opts ctx]
-                              (let [result (search-api.search-stories-all query {:max_results 100})
+                              (let [result (if query
+                                              (search-api.search-stories-all query {:max_results 100})
+                                              (stories-api.query {:archived false}))
                                     items []]
                                 (when result.ok
                                   (each [i story (ipairs (or result.data []))]
                                     (let [file (M.find-local-file story.id "story")
                                           state (or story.workflow_state_name "")
+                                          story-type (or story.story_type "")
                                           owner-names (let [names []]
                                                         (each [_ o (ipairs (or story.owners []))]
                                                           (when o.profile
                                                             (table.insert names (or o.profile.name o.profile.mention_name ""))))
                                                         (table.concat names ", "))
+                                          label-names (let [names []]
+                                                        (each [_ lbl (ipairs (or story.labels []))]
+                                                          (table.insert names (or lbl.name "")))
+                                                        (table.concat names ", "))
+                                          preview-text (if story.description
+                                                           story.description
+                                                           (string.format
+                                                             "# %s\n\n**State:** %s\n**Type:** %s%s%s%s"
+                                                             (or story.name "")
+                                                             state
+                                                             story-type
+                                                             (if (> (length owner-names) 0)
+                                                                 (.. "\n**Owners:** " owner-names)
+                                                                 "")
+                                                             (if (and story.estimate (not= story.estimate vim.NIL))
+                                                                 (.. "\n**Estimate:** " (tostring story.estimate))
+                                                                 "")
+                                                             (if (> (length label-names) 0)
+                                                                 (.. "\n**Labels:** " label-names)
+                                                                 "")))
                                           text (string.format "%s %s [%s] @%s"
                                                               (tostring story.id)
                                                               (or story.name "")
@@ -96,12 +129,12 @@
                                                            :id story.id
                                                            :name (or story.name "")
                                                            :state state
-                                                           :story_type (or story.story_type "")
+                                                           :story_type story-type
                                                            :owners owner-names
                                                            :estimate story.estimate
                                                            :file file
                                                            :preview (if file "file"
-                                                                        {:text (or story.description "No description")
+                                                                        {:text preview-text
                                                                          :ft "markdown"})}))))
                                 items))
                     :format (fn [item picker]
@@ -134,7 +167,7 @@
     (Snacks.picker {:source "longway_epics"
                     :title "Longway Epics"
                     :layout (M.build-picker-layout)
-                    :preview "preview"
+                    :preview item-preview
                     :finder (fn [finder-opts ctx]
                               (let [result (epics-api.list)
                                     items []]
@@ -243,7 +276,7 @@
         (Snacks.picker {:source "longway_presets"
                     :title "Longway Presets"
                     :layout (M.build-picker-layout)
-                    :preview "preview"
+                    :preview item-preview
                     :items items
                     :format (fn [item picker]
                               (let [ret []]
@@ -272,7 +305,7 @@
     (Snacks.picker {:source "longway_modified"
                     :title "Longway Modified Files"
                     :layout (M.build-picker-layout)
-                    :preview "preview"
+                    :preview item-preview
                     :finder (fn [finder-opts ctx]
                               (let [items []
                                     ;; Gather all markdown files
@@ -325,15 +358,16 @@
                                 (when item.has_conflict
                                   (table.insert ret [" CONFLICT" "ErrorMsg"]))
                                 ret))
-                    :win {:input {:keys {:<C-p> {:fn (fn [picker]
-                                                       (let [item (picker:current)
-                                                             push-mod (require :longway.sync.push)]
-                                                         (when (and item item.file)
-                                                           ;; Open file and push
-                                                           (vim.cmd (.. "edit " item.file))
-                                                           (push-mod.push-current-buffer))))
-                                                   :mode [:n :i]
-                                                   :desc "Push selected file"}}}}
+                    :win {:input {:keys {:<C-p> (let [keymap {:mode [:n :i]
+                                                                    :desc "Push selected file"}]
+                                                        (tset keymap 1
+                                                              (fn [picker]
+                                                                (let [item (picker:current)
+                                                                      push-mod (require :longway.sync.push)]
+                                                                  (when (and item item.file)
+                                                                    (vim.cmd (.. "edit " item.file))
+                                                                    (push-mod.push-current-buffer)))))
+                                                        keymap)}}}
                     :confirm (fn [picker item]
                                (picker:close)
                                (when (and item item.file)
@@ -361,7 +395,7 @@
         (Snacks.picker {:source "longway_comments"
                         :title (string.format "Comments — Story %s" (tostring shortcut-id))
                         :layout (M.build-picker-layout)
-                        :preview "preview"
+                        :preview item-preview
                         :finder (fn [finder-opts ctx]
                                   (let [result (comments-api.list shortcut-id)
                                         items []]
