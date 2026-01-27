@@ -46,9 +46,12 @@ Thank you for your interest in contributing to longway.nvim! This guide will hel
 │   │   └── search.fnl    # Search API
 │   ├── sync/
 │   │   ├── pull.fnl      # Fetch from API → markdown files
-│   │   ├── push.fnl      # Parse markdown → push to API
+│   │   ├── push.fnl      # Parse markdown → push to API (with conflict detection)
 │   │   ├── tasks.fnl     # Task diff, push, pull, merge logic
-│   │   └── comments.fnl  # Comment diff, push, pull logic
+│   │   ├── comments.fnl  # Comment diff, push, pull logic
+│   │   ├── diff.fnl      # Section-level change detection
+│   │   ├── resolve.fnl   # Conflict resolution strategies
+│   │   └── auto.fnl      # Auto-push on save with debounce
 │   ├── markdown/
 │   │   ├── parser.fnl    # Parse markdown (frontmatter + sync sections)
 │   │   ├── renderer.fnl  # Convert API responses → markdown
@@ -57,7 +60,10 @@ Thank you for your interest in contributing to longway.nvim! This guide will hel
 │   │   └── frontmatter.fnl # YAML frontmatter handling
 │   ├── ui/
 │   │   ├── notify.fnl    # User notifications
-│   │   └── confirm.fnl   # Confirmation prompts (task/comment deletion)
+│   │   ├── confirm.fnl   # Confirmation prompts (task/comment deletion)
+│   │   ├── picker.fnl    # Snacks picker integration (stories, epics, presets, modified)
+│   │   ├── progress.fnl  # Progress indicators for bulk operations
+│   │   └── statusline.fnl# Statusline component (lualine, custom)
 │   ├── util/
 │   │   ├── hash.fnl      # Content + task + comment hashing
 │   │   └── slug.fnl      # Title → filename slug

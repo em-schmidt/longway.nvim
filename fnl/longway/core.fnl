@@ -16,7 +16,7 @@
   "Get plugin information"
   (let [cfg (config.get)]
     {:name "longway.nvim"
-     :version "0.5.0"
+     :version "0.6.0"
      :author "Eric Schmidt"
      :configured (config.is-configured)
      :workspace_dir (config.get-workspace-dir)
@@ -249,5 +249,23 @@
       (notify.no-token)
       (let [resolve-mod (require :longway.sync.resolve)]
         (resolve-mod.resolve strategy {}))))
+
+;; Phase 6: Picker
+
+(fn M.picker [source opts]
+  "Open a Snacks picker for the given source type.
+   source: 'stories' | 'epics' | 'presets' | 'modified' | 'comments'"
+  (if (not (config.is-configured))
+      (notify.no-token)
+      (let [picker (require :longway.ui.picker)]
+        (if (not (picker.check-snacks))
+            nil
+            (match source
+              :stories (picker.pick-stories (or opts {}))
+              :epics (picker.pick-epics (or opts {}))
+              :presets (picker.pick-presets)
+              :modified (picker.pick-modified (or opts {}))
+              :comments (picker.pick-comments (or opts {}))
+              _ (notify.error (string.format "Unknown picker source: %s" (tostring source))))))))
 
 M

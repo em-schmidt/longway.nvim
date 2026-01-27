@@ -22,6 +22,9 @@ M.search = function(query, opts)
   end
   return client.get("/search/stories", {query = params})
 end
+M.query = function(params)
+  return client.post("/stories/search", {body = (params or {})})
+end
 M["list-for-epic"] = function(epic_id)
   return client.get(string.format("/epics/%s/stories", tostring(epic_id)))
 end

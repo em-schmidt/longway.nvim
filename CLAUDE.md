@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 longway.nvim is a Fennel-based Neovim plugin for bidirectional synchronization between [Shortcut](https://shortcut.com) and local markdown files. Users can pull stories/epics from Shortcut, edit them as markdown in Neovim, and push changes back.
 
-**Current Status:** Phase 5 complete (v0.5.0) - Bidirectional sync with conflict detection, auto-push on save, and conflict resolution commands
+**Current Status:** Phase 6 complete (v0.6.0) - UI polish with Snacks picker integration, progress tracking, and statusline component
 
 ## Build Commands
 
@@ -64,8 +64,11 @@ fnl/longway/           # Fennel source (edit these)
 │   ├── tasks.fnl      # Task parsing, rendering, owner resolution
 │   └── comments.fnl   # Comment parsing, rendering, author resolution
 ├── ui/
-│   ├── notify.fnl     # User notifications
-│   └── confirm.fnl    # Confirmation prompts (task/comment deletion)
+│   ├── notify.fnl     # User notifications (with Snacks.notify integration)
+│   ├── confirm.fnl    # Confirmation prompts (task/comment deletion)
+│   ├── progress.fnl   # Progress tracking for bulk operations
+│   ├── picker.fnl     # Snacks picker sources (stories/epics/presets/modified/comments)
+│   └── statusline.fnl # Statusline component API (lualine-compatible)
 ├── cache/
 │   └── store.fnl      # In-memory cache
 └── util/
@@ -91,6 +94,7 @@ plugin/longway.lua     # User command definitions
 ## Dependencies
 
 - **Runtime:** Neovim >= 0.10.0, plenary.nvim
+- **Optional:** snacks.nvim (for `:LongwayPicker` and enhanced notifications)
 - **Development:** nfnl (Fennel compiler), plenary.busted (tests)
 
 ## Development Workflow
@@ -135,4 +139,5 @@ Each entity type has one module owning all parsing and rendering:
 - `docs/IMPLEMENTATION_PLAN.md` - Phase breakdown with tasks
 - `docs/PHASE_4_PLAN.md` - Phase 4 comment synchronization implementation plan
 - `docs/PHASE_5_PLAN.md` - Phase 5 bidirectional sync & conflicts implementation plan
+- `docs/PHASE_6_PLAN.md` - Phase 6 UI polish implementation plan
 - `CONTRIBUTING.md` - Development setup guide

@@ -29,6 +29,13 @@
         (set params.next opts.next)))
     (client.get "/search/stories" {:query params})))
 
+(fn M.query [params]
+  "Query stories with structured filters (POST /stories/search).
+   params: table of filter fields (e.g., {:archived false})
+   An empty table returns all non-archived stories.
+   Returns: {:ok bool :data [stories] :error string}"
+  (client.post "/stories/search" {:body (or params {})}))
+
 (fn M.list-for-epic [epic-id]
   "List all stories in an epic
    Returns: {:ok bool :data [stories] :error string}"

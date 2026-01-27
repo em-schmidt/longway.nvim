@@ -143,6 +143,22 @@ end, {
   desc = 'Resolve sync conflict (local, remote, or manual)',
 })
 
+-- Phase 6: Picker command
+vim.api.nvim_create_user_command('LongwayPicker', function(opts)
+  local source = opts.args
+  if source == '' then
+    vim.notify('[longway] Usage: :LongwayPicker <stories|epics|presets|modified|comments>', vim.log.levels.ERROR)
+    return
+  end
+  require('longway').picker(source)
+end, {
+  nargs = 1,
+  complete = function()
+    return { 'stories', 'epics', 'presets', 'modified', 'comments' }
+  end,
+  desc = 'Open Snacks picker (stories, epics, presets, modified, comments)',
+})
+
 -- Legacy hello command for testing
 vim.api.nvim_create_user_command('LongwayHello', function()
   require('longway').hello()

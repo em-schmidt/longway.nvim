@@ -23,10 +23,11 @@ M.setup = function(opts)
   end
   if config.get().auto_push_on_save then
     local auto = require("longway.sync.auto")
-    return auto.setup()
+    auto.setup()
   else
-    return nil
   end
+  local statusline = require("longway.ui.statusline")
+  return statusline.setup()
 end
 M.pull = core.pull
 M.push = core.push
@@ -47,6 +48,7 @@ M.cache_status = core["cache-status"]
 M.list_presets = core["list-presets"]
 M.get_info = core["get-info"]
 M.resolve = core.resolve
+M.picker = core.picker
 M["get-config"] = config.get
 M["is-configured"] = config["is-configured"]
 M["get-presets"] = config["get-presets"]

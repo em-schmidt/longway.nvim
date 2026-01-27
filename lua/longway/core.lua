@@ -10,7 +10,7 @@ M.hello = function()
 end
 M["get-info"] = function()
   local cfg = config.get()
-  return {name = "longway.nvim", version = "0.5.0", author = "Eric Schmidt", configured = config["is-configured"](), workspace_dir = config["get-workspace-dir"](), presets = config["get-presets"](), debug = cfg.debug}
+  return {name = "longway.nvim", version = "0.6.0", author = "Eric Schmidt", configured = config["is-configured"](), workspace_dir = config["get-workspace-dir"](), presets = config["get-presets"](), debug = cfg.debug}
 end
 M.pull = function(story_id)
   if not config["is-configured"]() then
@@ -335,6 +335,31 @@ M.resolve = function(strategy)
   else
     local resolve_mod = require("longway.sync.resolve")
     return resolve_mod.resolve(strategy, {})
+  end
+end
+M.picker = function(source, opts)
+  if not config["is-configured"]() then
+    return notify["no-token"]()
+  else
+    local picker = require("longway.ui.picker")
+    if not picker["check-snacks"]() then
+      return nil
+    else
+      if (source == "stories") then
+        return picker["pick-stories"]((opts or {}))
+      elseif (source == "epics") then
+        return picker["pick-epics"]((opts or {}))
+      elseif (source == "presets") then
+        return picker["pick-presets"]()
+      elseif (source == "modified") then
+        return picker["pick-modified"]((opts or {}))
+      elseif (source == "comments") then
+        return picker["pick-comments"]((opts or {}))
+      else
+        local _ = source
+        return notify.error(string.format("Unknown picker source: %s", tostring(source)))
+      end
+    end
   end
 end
 return M
