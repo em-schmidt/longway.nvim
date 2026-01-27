@@ -164,12 +164,29 @@ local function _1_()
     it("renders epic without crashing when stats is vim.NIL", _27_)
     local function _28_()
       local epic = {id = 100, name = "Epic", description = "", state = "done", app_url = "https://example.com", created_at = "2026-01-01T00:00:00Z", updated_at = "2026-01-15T00:00:00Z"}
+      local long_name = "This is a very long story name that exceeds forty characters easily"
+      local stories = {t["make-story"]({id = 1, name = long_name})}
+      local result = renderer["render-epic"](epic, stories)
+      assert.has_substring(result, "This is a very long story name that e...")
+      return assert.is_nil(string.find(result, ("[" .. long_name .. "]"), 1, true))
+    end
+    it("truncates long story names in epic stories table", _28_)
+    local function _29_()
+      local epic = {id = 100, name = "Epic", description = "", state = "done", app_url = "https://example.com", created_at = "2026-01-01T00:00:00Z", updated_at = "2026-01-15T00:00:00Z"}
+      local short_name = "Short Story"
+      local stories = {t["make-story"]({id = 1, name = short_name})}
+      local result = renderer["render-epic"](epic, stories)
+      return assert.has_substring(result, ("[" .. short_name .. "]"))
+    end
+    it("does not truncate short story names in epic stories table", _29_)
+    local function _30_()
+      local epic = {id = 100, name = "Epic", description = "", state = "done", app_url = "https://example.com", created_at = "2026-01-01T00:00:00Z", updated_at = "2026-01-15T00:00:00Z"}
       local stories = {{id = 1, name = "Story With Nils", estimate = vim.NIL, completed = vim.NIL, started = vim.NIL, workflow_state_name = vim.NIL, owners = {}, labels = {}, tasks = {}, comments = {}, description = "", story_type = "feature", app_url = "https://example.com/1", created_at = "2026-01-01T00:00:00Z", updated_at = "2026-01-15T00:00:00Z"}}
       local result = renderer["render-epic"](epic, stories)
       assert.has_substring(result, "Story With Nils")
       return assert.is_nil(string.find(result, "vim.NIL"))
     end
-    return it("renders epic stories table when story fields are vim.NIL", _28_)
+    return it("renders epic stories table when story fields are vim.NIL", _30_)
   end
   return describe("vim.NIL handling", _24_)
 end

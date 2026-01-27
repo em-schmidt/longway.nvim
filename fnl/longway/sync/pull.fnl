@@ -5,6 +5,8 @@
 (local stories-api (require :longway.api.stories))
 (local comments-api (require :longway.api.comments))
 (local epics-api (require :longway.api.epics))
+(local members-api (require :longway.api.members))
+(local workflows-api (require :longway.api.workflows))
 (local search-api (require :longway.api.search))
 (local comments-md (require :longway.markdown.comments))
 (local renderer (require :longway.markdown.renderer))
@@ -49,6 +51,29 @@
                 formatted (comments-md.format-api-comments limited)]
             (set story.comments formatted))))))
   story)
+
+(fn enrich-story-slim [story]
+  "Enrich a StorySlim object with resolved names for rendering.
+   The epic stories endpoint returns workflow_state_id and owner_ids (UUIDs),
+   but the renderer expects workflow_state_name and owners [{:profile {:name ...}}]."
+  (when (and story.workflow_state_id (not story.workflow_state_name))
+    (set story.workflow_state_name
+         (workflows-api.resolve-state-name story.workflow_state_id)))
+  (when (and story.owner_ids
+             (not story.owners)
+             (> (length story.owner_ids) 0))
+    (let [owners []]
+      (each [_ owner-id (ipairs story.owner_ids)]
+        (let [name (members-api.resolve-name owner-id)]
+          (table.insert owners {:id owner-id :profile {:name name}})))
+      (set story.owners owners)))
+  story)
+
+(fn enrich-epic-stories [stories]
+  "Enrich a list of StorySlim objects for epic table rendering."
+  (each [_ story (ipairs stories)]
+    (enrich-story-slim story))
+  stories)
 
 (fn M.pull-story [story-id]
   "Pull a single story from Shortcut and save as markdown
@@ -112,7 +137,7 @@
                           (notify.api-error result.error result.status)
                           {:ok false :error result.error})
                         (let [epic result.data.epic
-                              stories result.data.stories
+                              stories (enrich-epic-stories (or result.data.stories []))
                               markdown (renderer.render-epic epic stories)
                               lines (vim.split markdown "\n" {:plain true})]
                           (vim.api.nvim_buf_set_lines bufnr 0 -1 false lines)
@@ -141,9 +166,9 @@
         (do
           (notify.api-error result.error result.status)
           {:ok false :error result.error})
-        ;; Got the epic
+        ;; Got the epic — enrich StorySlim objects with resolved names
         (let [epic result.data.epic
-              stories result.data.stories
+              stories (enrich-epic-stories (or result.data.stories []))
               epics-dir (config.get-epics-dir)
               filename (slug.make-filename epic.id epic.name "epic")
               filepath (.. epics-dir "/" filename)

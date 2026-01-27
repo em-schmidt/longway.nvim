@@ -3,6 +3,8 @@ local config = require("longway.config")
 local stories_api = require("longway.api.stories")
 local comments_api = require("longway.api.comments")
 local epics_api = require("longway.api.epics")
+local members_api = require("longway.api.members")
+local workflows_api = require("longway.api.workflows")
 local search_api = require("longway.api.search")
 local comments_md = require("longway.markdown.comments")
 local renderer = require("longway.markdown.renderer")
@@ -53,6 +55,28 @@ local function fetch_story_comments(story)
     end
   end
   return story
+end
+local function enrich_story_slim(story)
+  if (story.workflow_state_id and not story.workflow_state_name) then
+    story.workflow_state_name = workflows_api["resolve-state-name"](story.workflow_state_id)
+  else
+  end
+  if (story.owner_ids and not story.owners and (#story.owner_ids > 0)) then
+    local owners = {}
+    for _, owner_id in ipairs(story.owner_ids) do
+      local name = members_api["resolve-name"](owner_id)
+      table.insert(owners, {id = owner_id, profile = {name = name}})
+    end
+    story.owners = owners
+  else
+  end
+  return story
+end
+local function enrich_epic_stories(stories)
+  for _, story in ipairs(stories) do
+    enrich_story_slim(story)
+  end
+  return stories
 end
 M["pull-story"] = function(story_id)
   notify["pull-started"](story_id)
@@ -107,7 +131,7 @@ M["refresh-current-buffer"] = function()
           return {error = result.error, ok = false}
         else
           local epic = result.data.epic
-          local stories = result.data.stories
+          local stories = enrich_epic_stories((result.data.stories or {}))
           local markdown = renderer["render-epic"](epic, stories)
           local lines = vim.split(markdown, "\n", {plain = true})
           vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
@@ -139,7 +163,7 @@ M["pull-epic"] = function(epic_id)
     return {error = result.error, ok = false}
   else
     local epic = result.data.epic
-    local stories = result.data.stories
+    local stories = enrich_epic_stories((result.data.stories or {}))
     local epics_dir = config["get-epics-dir"]()
     local filename = slug["make-filename"](epic.id, epic.name, "epic")
     local filepath = (epics_dir .. "/" .. filename)

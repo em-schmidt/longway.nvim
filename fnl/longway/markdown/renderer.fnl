@@ -10,6 +10,8 @@
 
 (local M {})
 
+(local MAX_COL_WIDTH 40)
+
 (fn nil-safe [value fallback]
   "Return fallback if value is nil or vim.NIL (userdata from JSON null).
    Defaults fallback to nil."
@@ -17,6 +19,12 @@
           (and (= (type value) :userdata) (= value vim.NIL)))
       fallback
       value))
+
+(fn truncate [text max-len]
+  "Truncate text to max-len characters, appending '...' if truncated."
+  (if (or (not text) (<= (length text) max-len))
+      text
+      (.. (string.sub text 1 (- max-len 3)) "...")))
 
 (fn generate-story-filename [story]
   "Generate the filename for a story markdown file"
@@ -158,9 +166,11 @@
      :stats stats}))
 
 (fn render-story-link [story]
-  "Render a link to a story's markdown file"
-  (let [filename (generate-story-filename story)]
-    (string.format "[%s](../stories/%s)" story.name filename)))
+  "Render a link to a story's markdown file.
+   Truncates the display title to MAX_COL_WIDTH for table column readability."
+  (let [filename (generate-story-filename story)
+        display-name (truncate story.name MAX_COL_WIDTH)]
+    (string.format "[%s](../stories/%s)" display-name filename)))
 
 (fn render-story-state-badge [story]
   "Render a state indicator for a story"
@@ -218,8 +228,8 @@
                         (string.format "| %s | %s | %s | %s | %s |"
                                        status-icon
                                        story-link
-                                       (nil-safe story.workflow_state_name "-")
-                                       owner-name
+                                       (truncate (nil-safe story.workflow_state_name "-") MAX_COL_WIDTH)
+                                       (truncate owner-name MAX_COL_WIDTH)
                                        points)))))
 
     ;; Milestones section (if epic has milestone)

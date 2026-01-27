@@ -6,11 +6,19 @@ local slug = require("longway.util.slug")
 local tasks_md = require("longway.markdown.tasks")
 local comments_md = require("longway.markdown.comments")
 local M = {}
+local MAX_COL_WIDTH = 40
 local function nil_safe(value, fallback)
   if ((value == nil) or ((type(value) == "userdata") and (value == vim.NIL))) then
     return fallback
   else
     return value
+  end
+end
+local function truncate(text, max_len)
+  if (not text or (#text <= max_len)) then
+    return text
+  else
+    return (string.sub(text, 1, (max_len - 3)) .. "...")
   end
 end
 local function generate_story_filename(story)
@@ -123,7 +131,8 @@ local function build_epic_frontmatter(epic)
 end
 local function render_story_link(story)
   local filename = generate_story_filename(story)
-  return string.format("[%s](../stories/%s)", story.name, filename)
+  local display_name = truncate(story.name, MAX_COL_WIDTH)
+  return string.format("[%s](../stories/%s)", display_name, filename)
 end
 local function render_story_state_badge(story)
   local state = nil_safe(story.workflow_state_name, "Unknown")
@@ -139,14 +148,14 @@ local function render_epic_stats(epic)
   local stats = nil_safe(epic.stats, {})
   local num_done = nil_safe(stats.num_stories_done, 0)
   local num_total = nil_safe(stats.num_stories, 0)
-  local function _13_()
+  local function _14_()
     if (num_total and (num_total > 0)) then
       return math.floor(((num_done / num_total) * 100))
     else
       return 0
     end
   end
-  return string.format("**Progress:** %d/%d stories done (%d%%)", num_done, num_total, _13_())
+  return string.format("**Progress:** %d/%d stories done (%d%%)", num_done, num_total, _14_())
 end
 M["render-epic"] = function(epic, stories)
   local fm_data = build_epic_frontmatter(epic)
@@ -177,7 +186,7 @@ M["render-epic"] = function(epic, stories)
         status_icon = "\226\151\139"
       end
       local story_link = render_story_link(story)
-      table.insert(sections, string.format("| %s | %s | %s | %s | %s |", status_icon, story_link, nil_safe(story.workflow_state_name, "-"), owner_name, points))
+      table.insert(sections, string.format("| %s | %s | %s | %s | %s |", status_icon, story_link, truncate(nil_safe(story.workflow_state_name, "-"), MAX_COL_WIDTH), truncate(owner_name, MAX_COL_WIDTH), points))
     end
   else
   end

@@ -206,6 +206,38 @@
               (assert.has_substring result "0/0 stories done")
               (assert.is_nil (string.find result "vim.NIL")))))
 
+        (it "truncates long story names in epic stories table"
+          (fn []
+            (let [epic {:id 100
+                        :name "Epic"
+                        :description ""
+                        :state "done"
+                        :app_url "https://example.com"
+                        :created_at "2026-01-01T00:00:00Z"
+                        :updated_at "2026-01-15T00:00:00Z"}
+                  long-name "This is a very long story name that exceeds forty characters easily"
+                  stories [(t.make-story {:id 1 :name long-name})]
+                  result ((. renderer "render-epic") epic stories)]
+              ;; The link title should be truncated to 40 chars with ellipsis
+              (assert.has_substring result "This is a very long story name that e...")
+              ;; The full name should NOT appear as the link title
+              (assert.is_nil (string.find result (.. "[" long-name "]") 1 true)))))
+
+        (it "does not truncate short story names in epic stories table"
+          (fn []
+            (let [epic {:id 100
+                        :name "Epic"
+                        :description ""
+                        :state "done"
+                        :app_url "https://example.com"
+                        :created_at "2026-01-01T00:00:00Z"
+                        :updated_at "2026-01-15T00:00:00Z"}
+                  short-name "Short Story"
+                  stories [(t.make-story {:id 1 :name short-name})]
+                  result ((. renderer "render-epic") epic stories)]
+              ;; Short name should appear in full
+              (assert.has_substring result (.. "[" short-name "]")))))
+
         (it "renders epic stories table when story fields are vim.NIL"
           (fn []
             (let [epic {:id 100
