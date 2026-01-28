@@ -111,12 +111,12 @@
                   has-changes? (. comments-sync "has-changes?")]
               (assert.is_true (has-changes? diff)))))
 
-        (it "returns false when only edits (no creates or deletes)"
+        (it "returns true when there are edited comments"
           (fn []
             (let [diff {:created [] :deleted [] :edited [{:id 1}] :unchanged []}
                   has-changes? (. comments-sync "has-changes?")]
-              ;; Edits alone don't count as API changes (since Shortcut doesn't support edit)
-              (assert.is_false (has-changes? diff)))))
+              ;; Edits are synced to Shortcut
+              (assert.is_true (has-changes? diff)))))
 
         (it "returns false when no changes"
           (fn []
