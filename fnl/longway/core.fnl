@@ -8,10 +8,6 @@
 
 (local M {})
 
-(fn M.hello []
-  "Simple hello function for testing"
-  (print "Hello from longway.nvim!"))
-
 (fn M.get-info []
   "Get plugin information"
   (let [cfg (config.get)]

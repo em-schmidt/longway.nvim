@@ -5,9 +5,6 @@ local push = require("longway.sync.push")
 local notify = require("longway.ui.notify")
 local cache = require("longway.cache.store")
 local M = {}
-M.hello = function()
-  return print("Hello from longway.nvim!")
-end
 M["get-info"] = function()
   local cfg = config.get()
   return {name = "longway.nvim", version = "0.6.0", author = "Eric Schmidt", configured = config["is-configured"](), workspace_dir = config["get-workspace-dir"](), presets = config["get-presets"](), debug = cfg.debug}

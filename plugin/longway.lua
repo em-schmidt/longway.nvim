@@ -159,9 +159,3 @@ end, {
   desc = 'Open Snacks picker (stories, epics, presets, modified, comments)',
 })
 
--- Legacy hello command for testing
-vim.api.nvim_create_user_command('LongwayHello', function()
-  require('longway').hello()
-end, {
-  desc = 'Test longway.nvim plugin',
-})
