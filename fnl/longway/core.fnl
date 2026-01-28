@@ -8,10 +8,6 @@
 
 (local M {})
 
-(fn M.hello []
-  "Simple hello function for testing"
-  (print "Hello from longway.nvim!"))
-
 (fn M.get-info []
   "Get plugin information"
   (let [cfg (config.get)]
@@ -63,7 +59,7 @@
                          (if task.complete (+ n 1) n))
         new-count (accumulate [n 0 _ task (ipairs local-tasks)]
                     (if task.is_new (+ n 1) n))
-        tasks-hash-stored (or fm.tasks_hash "")]
+        tasks-hash-stored (tostring (or fm.tasks_hash ""))]
     (print (string.format "Tasks: %d local (%d complete, %d new)"
                           local-count complete-count new-count))
     (when (> (length tasks-hash-stored) 0)
@@ -80,7 +76,7 @@
         local-count (length local-comments)
         new-count (accumulate [n 0 _ cmt (ipairs local-comments)]
                     (if cmt.is_new (+ n 1) n))
-        comments-hash-stored (or fm.comments_hash "")]
+        comments-hash-stored (tostring (or fm.comments_hash ""))]
     (print (string.format "Comments: %d local (%d new)"
                           local-count new-count))
     (when (> (length comments-hash-stored) 0)
@@ -93,7 +89,7 @@
 
 (fn print-description-status [parsed fm]
   "Print description sync status info"
-  (let [sync-hash-stored (or fm.sync_hash "")]
+  (let [sync-hash-stored (tostring (or fm.sync_hash ""))]
     (when (> (length sync-hash-stored) 0)
       (let [hash-mod (require :longway.util.hash)
             content-hash (. hash-mod "content-hash")

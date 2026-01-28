@@ -4,6 +4,7 @@
 (local config (require :longway.config))
 (local frontmatter (require :longway.markdown.frontmatter))
 (local tasks-md (require :longway.markdown.tasks))
+(local comments-md (require :longway.markdown.comments))
 
 (local M {})
 
@@ -35,46 +36,13 @@
         []
         (tasks-md.parse-section tasks-content))))
 
-(fn parse-comment-block [block]
-  "Parse a comment block into structured data"
-  ;; Format:
-  ;; ---
-  ;; **Author Name** · 2026-01-18 10:30 <!-- comment:123 -->
-  ;;
-  ;; Comment text here
-  (let [header-pattern "%*%*(.-)%*%*%s*·%s*([%d%-]+%s*[%d:]+)%s*<!%-%-%s*comment:(%S+)%s*%-%->"
-        lines []]
-    (var found-header false)
-    (var header-line nil)
-    (each [line (string.gmatch (.. block "\n") "([^\n]*)\n")]
-      (if (not found-header)
-          (let [(author timestamp id) (string.match line header-pattern)]
-            (when author
-              (set found-header true)
-              (set header-line {:author author
-                                :timestamp timestamp
-                                :id (if (= id "new") nil (tonumber id))
-                                :is_new (= id "new")})))
-          ;; Collect body lines (skip empty lines at start)
-          (when (or (> (length lines) 0) (not (string.match line "^%s*$")))
-            (table.insert lines line))))
-    (when header-line
-      (set header-line.text (table.concat lines "\n"))
-      header-line)))
-
 (fn M.extract-comments [content]
-  "Extract comments from the comments sync section"
+  "Extract comments from the comments sync section.
+   Delegates to comments-md.parse-section (single source of truth)."
   (let [comments-content (extract-sync-section content "comments")]
     (if (not comments-content)
         []
-        (let [comments []
-              ;; Split by --- separator
-              blocks (vim.split comments-content "\n%-%-%-\n" {:plain false :trimempty true})]
-          (each [_ block (ipairs blocks)]
-            (let [cmt (parse-comment-block block)]
-              (when cmt
-                (table.insert comments cmt))))
-          comments))))
+        (comments-md.parse-section comments-content))))
 
 (fn M.parse [content]
   "Parse a complete markdown file

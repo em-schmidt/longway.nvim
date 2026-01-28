@@ -9,7 +9,7 @@
 (fn M.first-sync? [frontmatter]
   "Returns true if this file has never been synced (no stored hash).
    On first render, sync_hash is set to empty string."
-  (let [sync-hash (or (. frontmatter :sync_hash) "")]
+  (let [sync-hash (tostring (or (. frontmatter :sync_hash) ""))]
     (= sync-hash "")))
 
 (fn M.compute-section-hashes [parsed]
@@ -26,12 +26,18 @@
             (true = section has local changes)"
   (let [fm parsed.frontmatter
         current (M.compute-section-hashes parsed)
-        stored-desc (or fm.sync_hash "")
-        stored-tasks (or fm.tasks_hash "")
-        stored-comments (or fm.comments_hash "")]
-    {:description (not= current.description stored-desc)
-     :tasks (not= current.tasks stored-tasks)
-     :comments (not= current.comments stored-comments)}))
+        stored-desc (tostring (or fm.sync_hash ""))
+        stored-tasks (tostring (or fm.tasks_hash ""))
+        stored-comments (tostring (or fm.comments_hash ""))]
+    ;; Only flag a section as changed if it has a stored hash (non-empty).
+    ;; Epics lack tasks_hash/comments_hash, so those sections should not
+    ;; be considered changed.
+    {:description (and (> (length stored-desc) 0)
+                       (not= current.description stored-desc))
+     :tasks (and (> (length stored-tasks) 0)
+                 (not= current.tasks stored-tasks))
+     :comments (and (> (length stored-comments) 0)
+                    (not= current.comments stored-comments))}))
 
 (fn M.any-local-change? [parsed]
   "Returns true if ANY section has local changes vs. frontmatter hashes.

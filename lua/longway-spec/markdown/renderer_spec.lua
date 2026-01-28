@@ -136,6 +136,58 @@ local function _1_()
     end
     return it("renders stories table when provided", _23_)
   end
-  return describe("render-epic", _19_)
+  describe("render-epic", _19_)
+  local function _24_()
+    local function _25_()
+      local story = t["make-story"]({epic_id = vim.NIL, iteration_id = vim.NIL, group_id = vim.NIL, estimate = vim.NIL})
+      local result = renderer["render-story"](story)
+      assert.has_frontmatter(result)
+      assert.has_substring(result, "shortcut_id: 12345")
+      return assert.is_nil(string.find(result, "vim.NIL"))
+    end
+    it("renders story without crashing when optional fields are vim.NIL", _25_)
+    local function _26_()
+      local story = t["make-story"]({app_url = vim.NIL, created_at = vim.NIL, updated_at = vim.NIL})
+      local result = renderer["render-story"](story)
+      assert.has_frontmatter(result)
+      return assert.is_nil(string.find(result, "vim.NIL"))
+    end
+    it("renders story when app_url and dates are vim.NIL", _26_)
+    local function _27_()
+      local epic = {id = 100, name = "Nil Stats Epic", description = "Test", state = "done", app_url = "https://example.com", stats = vim.NIL, planned_start_date = vim.NIL, deadline = vim.NIL, created_at = "2026-01-01T00:00:00Z", updated_at = "2026-01-15T00:00:00Z"}
+      local result = renderer["render-epic"](epic, {})
+      assert.has_frontmatter(result)
+      assert.has_substring(result, "# Nil Stats Epic")
+      assert.has_substring(result, "0/0 stories done")
+      return assert.is_nil(string.find(result, "vim.NIL"))
+    end
+    it("renders epic without crashing when stats is vim.NIL", _27_)
+    local function _28_()
+      local epic = {id = 100, name = "Epic", description = "", state = "done", app_url = "https://example.com", created_at = "2026-01-01T00:00:00Z", updated_at = "2026-01-15T00:00:00Z"}
+      local long_name = "This is a very long story name that exceeds forty characters easily"
+      local stories = {t["make-story"]({id = 1, name = long_name})}
+      local result = renderer["render-epic"](epic, stories)
+      assert.has_substring(result, "This is a very long story name that e...")
+      return assert.is_nil(string.find(result, ("[" .. long_name .. "]"), 1, true))
+    end
+    it("truncates long story names in epic stories table", _28_)
+    local function _29_()
+      local epic = {id = 100, name = "Epic", description = "", state = "done", app_url = "https://example.com", created_at = "2026-01-01T00:00:00Z", updated_at = "2026-01-15T00:00:00Z"}
+      local short_name = "Short Story"
+      local stories = {t["make-story"]({id = 1, name = short_name})}
+      local result = renderer["render-epic"](epic, stories)
+      return assert.has_substring(result, ("[" .. short_name .. "]"))
+    end
+    it("does not truncate short story names in epic stories table", _29_)
+    local function _30_()
+      local epic = {id = 100, name = "Epic", description = "", state = "done", app_url = "https://example.com", created_at = "2026-01-01T00:00:00Z", updated_at = "2026-01-15T00:00:00Z"}
+      local stories = {{id = 1, name = "Story With Nils", estimate = vim.NIL, completed = vim.NIL, started = vim.NIL, workflow_state_name = vim.NIL, owners = {}, labels = {}, tasks = {}, comments = {}, description = "", story_type = "feature", app_url = "https://example.com/1", created_at = "2026-01-01T00:00:00Z", updated_at = "2026-01-15T00:00:00Z"}}
+      local result = renderer["render-epic"](epic, stories)
+      assert.has_substring(result, "Story With Nils")
+      return assert.is_nil(string.find(result, "vim.NIL"))
+    end
+    return it("renders epic stories table when story fields are vim.NIL", _30_)
+  end
+  return describe("vim.NIL handling", _24_)
 end
 return describe("longway.markdown.renderer", _1_)

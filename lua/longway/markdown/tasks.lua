@@ -2,6 +2,13 @@
 local config = require("longway.config")
 local members = require("longway.api.members")
 local M = {}
+local function nil_safe(value, fallback)
+  if ((value == nil) or ((type(value) == "userdata") and (value == vim.NIL))) then
+    return fallback
+  else
+    return value
+  end
+end
 local function parse_task_metadata(metadata_str)
   local result = {id = nil, owner_mention = nil, complete = false, is_new = false}
   do
@@ -102,13 +109,14 @@ local function format_owner_mention(task)
     if task.owner_mention then
       return (" @" .. task.owner_mention)
     else
-      if (task.owner_ids and (#task.owner_ids > 0)) then
-        local first_owner = task.owner_ids[1]
+      local owner_ids = nil_safe(task.owner_ids)
+      if (owner_ids and (#owner_ids > 0)) then
+        local first_owner = owner_ids[1]
         local member = members["find-by-id"](first_owner)
-        if (member and member.profile and member.profile.mention_name) then
+        if (member and member.profile and nil_safe(member.profile.mention_name)) then
           return (" @" .. member.profile.mention_name)
         else
-          if (member and member.profile and member.profile.name) then
+          if (member and member.profile and nil_safe(member.profile.name)) then
             return (" @" .. string.gsub(member.profile.name, " ", "_"))
           else
             return ""
@@ -148,10 +156,10 @@ M["render-tasks"] = function(tasks)
     return ""
   else
     local lines = {}
-    local function _20_(a, b)
+    local function _21_(a, b)
       return ((a.position or 0) < (b.position or 0))
     end
-    table.sort(tasks, _20_)
+    table.sort(tasks, _21_)
     for _, task in ipairs(tasks) do
       table.insert(lines, M["render-task"](task))
     end
@@ -168,9 +176,10 @@ end
 M["format-api-tasks"] = function(raw_tasks)
   local formatted = {}
   for i, task in ipairs((raw_tasks or {})) do
+    local owner_ids = nil_safe(task.owner_ids, {})
     local owner_mention
-    if (task.owner_ids and (#task.owner_ids > 0)) then
-      local owner_name = M["resolve-owner-id"](task.owner_ids[1])
+    if (owner_ids and (#owner_ids > 0)) then
+      local owner_name = M["resolve-owner-id"](owner_ids[1])
       if owner_name then
         owner_mention = string.gsub(owner_name, " ", "_")
       else
@@ -179,7 +188,7 @@ M["format-api-tasks"] = function(raw_tasks)
     else
       owner_mention = nil
     end
-    table.insert(formatted, {id = task.id, description = task.description, complete = task.complete, owner_ids = (task.owner_ids or {}), owner_mention = owner_mention, position = (task.position or i), is_new = false})
+    table.insert(formatted, {id = task.id, description = nil_safe(task.description, ""), complete = nil_safe(task.complete, false), owner_ids = owner_ids, owner_mention = owner_mention, position = nil_safe(task.position, i), is_new = false})
   end
   return formatted
 end

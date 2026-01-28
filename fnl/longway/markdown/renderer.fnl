@@ -10,6 +10,22 @@
 
 (local M {})
 
+(local MAX_COL_WIDTH 40)
+
+(fn nil-safe [value fallback]
+  "Return fallback if value is nil or vim.NIL (userdata from JSON null).
+   Defaults fallback to nil."
+  (if (or (= value nil)
+          (and (= (type value) :userdata) (= value vim.NIL)))
+      fallback
+      value))
+
+(fn truncate [text max-len]
+  "Truncate text to max-len characters, appending '...' if truncated."
+  (if (or (not text) (<= (length text) max-len))
+      text
+      (.. (string.sub text 1 (- max-len 3)) "...")))
+
 (fn generate-story-filename [story]
   "Generate the filename for a story markdown file"
   (slug.make-filename story.id story.name "story"))
@@ -18,29 +34,36 @@
   "Build frontmatter data for a story"
   (let [fm {:shortcut_id story.id
             :shortcut_type "story"
-            :shortcut_url story.app_url
-            :story_type story.story_type
-            :state story.workflow_state_name
-            :created_at story.created_at
-            :updated_at story.updated_at}]
-    ;; Optional fields
-    (when story.epic_id
-      (set fm.epic_id story.epic_id))
-    (when story.iteration_id
-      (set fm.iteration_id story.iteration_id))
-    (when story.group_id
-      (set fm.team_id story.group_id))
-    (when story.estimate
-      (set fm.estimate story.estimate))
+            :shortcut_url (nil-safe story.app_url)
+            :story_type (nil-safe story.story_type)
+            :state (nil-safe story.workflow_state_name)
+            :created_at (nil-safe story.created_at)
+            :updated_at (nil-safe story.updated_at)}]
+    ;; Optional fields — use nil-safe to filter vim.NIL from API responses
+    (let [epic-id (nil-safe story.epic_id)
+          iteration-id (nil-safe story.iteration_id)
+          group-id (nil-safe story.group_id)
+          estimate (nil-safe story.estimate)]
+      (when epic-id
+        (set fm.epic_id epic-id))
+      (when iteration-id
+        (set fm.iteration_id iteration-id))
+      (when group-id
+        (set fm.team_id group-id))
+      (when estimate
+        (set fm.estimate estimate)))
 
     ;; Owners
-    (when (and story.owners (> (length story.owners) 0))
+    (when (and story.owners (not= (type story.owners) :userdata)
+              (> (length story.owners) 0))
       (set fm.owners [])
       (each [_ owner (ipairs story.owners)]
-        (table.insert fm.owners {:name owner.profile.name :id owner.id})))
+        (table.insert fm.owners {:name (nil-safe owner.profile.name "Unknown")
+                                 :id owner.id})))
 
     ;; Labels
-    (when (and story.labels (> (length story.labels) 0))
+    (when (and story.labels (not= (type story.labels) :userdata)
+              (> (length story.labels) 0))
       (set fm.labels [])
       (each [_ label (ipairs story.labels)]
         (table.insert fm.labels label.name)))
@@ -119,36 +142,43 @@
 
     ;; Build full content
     (let [body (table.concat sections "\n")
-          full-content (.. (frontmatter.generate fm-data) "\n\n" body)]
-      ;; Compute sync hashes
-      (set fm-data.sync_hash (hash.content-hash (or story.description "")))
-      (set fm-data.tasks_hash (hash.tasks-hash (or story.tasks [])))
-      (set fm-data.comments_hash (hash.comments-hash (or story.comments [])))
+          full-content (.. (frontmatter.generate fm-data) "\n\n" body)
+          ;; Re-parse rendered content so hashes match what future parses produce.
+          ;; This handles any transformations in the render→parse round-trip
+          ;; (e.g., leading blank line stripping in comments, whitespace normalization).
+          parser (require :longway.markdown.parser)
+          re-parsed (parser.parse full-content)]
+      (set fm-data.sync_hash (hash.content-hash (or re-parsed.description "")))
+      (set fm-data.tasks_hash (hash.tasks-hash (or re-parsed.tasks [])))
+      (set fm-data.comments_hash (hash.comments-hash (or re-parsed.comments [])))
       ;; Return with updated frontmatter
       (.. (frontmatter.generate fm-data) "\n\n" body))))
 
 (fn build-epic-frontmatter [epic]
   "Build frontmatter data for an epic"
-  {:shortcut_id epic.id
-   :shortcut_type "epic"
-   :shortcut_url epic.app_url
-   :state epic.state
-   :planned_start_date epic.planned_start_date
-   :deadline epic.deadline
-   :created_at epic.created_at
-   :updated_at epic.updated_at
-   :sync_hash ""
-   :local_updated_at (os.date "!%Y-%m-%dT%H:%M:%SZ")
-   :stats (or epic.stats {})})
+  (let [stats (nil-safe epic.stats {})]
+    {:shortcut_id epic.id
+     :shortcut_type "epic"
+     :shortcut_url (nil-safe epic.app_url)
+     :state (nil-safe epic.state)
+     :planned_start_date (nil-safe epic.planned_start_date)
+     :deadline (nil-safe epic.deadline)
+     :created_at (nil-safe epic.created_at)
+     :updated_at (nil-safe epic.updated_at)
+     :sync_hash ""
+     :local_updated_at (os.date "!%Y-%m-%dT%H:%M:%SZ")
+     :stats stats}))
 
 (fn render-story-link [story]
-  "Render a link to a story's markdown file"
-  (let [filename (generate-story-filename story)]
-    (string.format "[%s](../stories/%s)" story.name filename)))
+  "Render a link to a story's markdown file.
+   Truncates the display title to MAX_COL_WIDTH for table column readability."
+  (let [filename (generate-story-filename story)
+        display-name (truncate story.name MAX_COL_WIDTH)]
+    (string.format "[%s](../stories/%s)" display-name filename)))
 
 (fn render-story-state-badge [story]
   "Render a state indicator for a story"
-  (let [state (or story.workflow_state_name "Unknown")]
+  (let [state (nil-safe story.workflow_state_name "Unknown")]
     ;; Use emoji or text based on state type
     (if (string.find (string.lower state) "done")
         (.. "✓ " state)
@@ -158,12 +188,14 @@
 
 (fn render-epic-stats [epic]
   "Render epic statistics summary"
-  (let [stats (or epic.stats {})]
+  (let [stats (nil-safe epic.stats {})
+        num-done (nil-safe stats.num_stories_done 0)
+        num-total (nil-safe stats.num_stories 0)]
     (string.format "**Progress:** %d/%d stories done (%d%%)"
-                   (or stats.num_stories_done 0)
-                   (or stats.num_stories 0)
-                   (if (and stats.num_stories (> stats.num_stories 0))
-                       (math.floor (* (/ (or stats.num_stories_done 0) stats.num_stories) 100))
+                   num-done
+                   num-total
+                   (if (and num-total (> num-total 0))
+                       (math.floor (* (/ num-done num-total) 100))
                        0))))
 
 (fn M.render-epic [epic stories]
@@ -185,34 +217,41 @@
       (table.insert sections "| Status | Title | State | Owner | Points |")
       (table.insert sections "|:------:|-------|-------|-------|-------:|")
       (each [_ story (ipairs stories)]
-        (let [owner-name (if (and story.owners (> (length story.owners) 0))
-                             (. story.owners 1 :profile :name)
+        (let [owners (nil-safe story.owners)
+              owner-name (if (and owners (> (length owners) 0))
+                             (nil-safe (. owners 1 :profile :name) "-")
                              "-")
-              points (or story.estimate "-")
-              status-icon (if story.completed "✓"
-                              story.started "→"
+              points (nil-safe story.estimate "-")
+              completed (nil-safe story.completed)
+              started (nil-safe story.started)
+              status-icon (if completed "✓"
+                              started "→"
                               "○")
               story-link (render-story-link story)]
           (table.insert sections
                         (string.format "| %s | %s | %s | %s | %s |"
                                        status-icon
                                        story-link
-                                       (or story.workflow_state_name "-")
-                                       owner-name
+                                       (truncate (nil-safe story.workflow_state_name "-") MAX_COL_WIDTH)
+                                       (truncate owner-name MAX_COL_WIDTH)
                                        points)))))
 
     ;; Milestones section (if epic has milestone)
-    (when epic.milestone_id
+    (when (nil-safe epic.milestone_id)
       (table.insert sections "")
-      (table.insert sections (string.format "**Milestone:** %s" (or epic.milestone_id "-"))))
+      (table.insert sections (string.format "**Milestone:** %s" (nil-safe epic.milestone_id "-"))))
 
     ;; Local notes
     (table.insert sections "")
     (table.insert sections (render-local-notes))
 
     ;; Build full content
-    (let [body (table.concat sections "\n")]
-      (set fm-data.sync_hash (hash.content-hash (or epic.description "")))
+    (let [body (table.concat sections "\n")
+          full-content (.. (frontmatter.generate fm-data) "\n\n" body)
+          ;; Re-parse rendered content so hash matches what future parses produce
+          parser (require :longway.markdown.parser)
+          re-parsed (parser.parse full-content)]
+      (set fm-data.sync_hash (hash.content-hash (or re-parsed.description "")))
       (.. (frontmatter.generate fm-data) "\n\n" body))))
 
 M
