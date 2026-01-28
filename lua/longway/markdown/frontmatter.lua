@@ -12,7 +12,7 @@ local function serialize_value(value, indent)
     if (string.find(value, "\n") or string.find(value, ":") or string.find(value, "\"") or string.find(value, "'")) then
       return ("\"" .. string.gsub(value, "\"", "\\\"") .. "\"")
     else
-      if string.match(value, "^%d+$") then
+      if (string.match(value, "^%d+$") or tonumber(value)) then
         return ("\"" .. value .. "\"")
       else
         return value
@@ -105,7 +105,7 @@ local function parse_yaml_value(str)
     return string.gsub(string.match(trimmed, "^\"(.*)\"$"), "\\\"", "\"")
   elseif string.match(trimmed, "^'(.*)'$") then
     return string.match(trimmed, "^'(.*)'$")
-  elseif tonumber(trimmed) then
+  elseif (string.match(trimmed, "^%-?%d+%.?%d*$") and not string.match(trimmed, "^%-?0%d")) then
     return tonumber(trimmed)
   else
     return trimmed

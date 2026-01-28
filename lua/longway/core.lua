@@ -71,7 +71,7 @@ local function print_task_status(parsed, fm)
     end
     new_count = n
   end
-  local tasks_hash_stored = (fm.tasks_hash or "")
+  local tasks_hash_stored = tostring((fm.tasks_hash or ""))
   print(string.format("Tasks: %d local (%d complete, %d new)", local_count, complete_count, new_count))
   if (#tasks_hash_stored > 0) then
     local hash_mod = require("longway.util.hash")
@@ -104,7 +104,7 @@ local function print_comment_status(parsed, fm)
     end
     new_count = n
   end
-  local comments_hash_stored = (fm.comments_hash or "")
+  local comments_hash_stored = tostring((fm.comments_hash or ""))
   print(string.format("Comments: %d local (%d new)", local_count, new_count))
   if (#comments_hash_stored > 0) then
     local hash_mod = require("longway.util.hash")
@@ -123,7 +123,7 @@ local function print_comment_status(parsed, fm)
   end
 end
 local function print_description_status(parsed, fm)
-  local sync_hash_stored = (fm.sync_hash or "")
+  local sync_hash_stored = tostring((fm.sync_hash or ""))
   if (#sync_hash_stored > 0) then
     local hash_mod = require("longway.util.hash")
     local content_hash = hash_mod["content-hash"]

@@ -2,7 +2,7 @@
 local hash = require("longway.util.hash")
 local M = {}
 M["first-sync?"] = function(frontmatter)
-  local sync_hash = (frontmatter.sync_hash or "")
+  local sync_hash = tostring((frontmatter.sync_hash or ""))
   return (sync_hash == "")
 end
 M["compute-section-hashes"] = function(parsed)
@@ -12,10 +12,10 @@ end
 M["detect-local-changes"] = function(parsed)
   local fm = parsed.frontmatter
   local current = M["compute-section-hashes"](parsed)
-  local stored_desc = (fm.sync_hash or "")
-  local stored_tasks = (fm.tasks_hash or "")
-  local stored_comments = (fm.comments_hash or "")
-  return {description = (current.description ~= stored_desc), tasks = (current.tasks ~= stored_tasks), comments = (current.comments ~= stored_comments)}
+  local stored_desc = tostring((fm.sync_hash or ""))
+  local stored_tasks = tostring((fm.tasks_hash or ""))
+  local stored_comments = tostring((fm.comments_hash or ""))
+  return {description = ((#stored_desc > 0) and (current.description ~= stored_desc)), tasks = ((#stored_tasks > 0) and (current.tasks ~= stored_tasks)), comments = ((#stored_comments > 0) and (current.comments ~= stored_comments))}
 end
 M["any-local-change?"] = function(parsed)
   local changes = M["detect-local-changes"](parsed)

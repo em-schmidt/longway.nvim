@@ -142,11 +142,15 @@
 
     ;; Build full content
     (let [body (table.concat sections "\n")
-          full-content (.. (frontmatter.generate fm-data) "\n\n" body)]
-      ;; Compute sync hashes
-      (set fm-data.sync_hash (hash.content-hash (or story.description "")))
-      (set fm-data.tasks_hash (hash.tasks-hash (or story.tasks [])))
-      (set fm-data.comments_hash (hash.comments-hash (or story.comments [])))
+          full-content (.. (frontmatter.generate fm-data) "\n\n" body)
+          ;; Re-parse rendered content so hashes match what future parses produce.
+          ;; This handles any transformations in the render→parse round-trip
+          ;; (e.g., leading blank line stripping in comments, whitespace normalization).
+          parser (require :longway.markdown.parser)
+          re-parsed (parser.parse full-content)]
+      (set fm-data.sync_hash (hash.content-hash (or re-parsed.description "")))
+      (set fm-data.tasks_hash (hash.tasks-hash (or re-parsed.tasks [])))
+      (set fm-data.comments_hash (hash.comments-hash (or re-parsed.comments [])))
       ;; Return with updated frontmatter
       (.. (frontmatter.generate fm-data) "\n\n" body))))
 
@@ -242,8 +246,12 @@
     (table.insert sections (render-local-notes))
 
     ;; Build full content
-    (let [body (table.concat sections "\n")]
-      (set fm-data.sync_hash (hash.content-hash (or epic.description "")))
+    (let [body (table.concat sections "\n")
+          full-content (.. (frontmatter.generate fm-data) "\n\n" body)
+          ;; Re-parse rendered content so hash matches what future parses produce
+          parser (require :longway.markdown.parser)
+          re-parsed (parser.parse full-content)]
+      (set fm-data.sync_hash (hash.content-hash (or re-parsed.description "")))
       (.. (frontmatter.generate fm-data) "\n\n" body))))
 
 M

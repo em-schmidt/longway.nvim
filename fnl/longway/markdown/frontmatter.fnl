@@ -19,8 +19,9 @@
                 (string.find value "\"")
                 (string.find value "'"))
             (.. "\"" (string.gsub value "\"" "\\\"") "\"")
-            (if (string.match value "^%d+$")
-                (.. "\"" value "\"")  ;; Quote numeric strings
+            (if (or (string.match value "^%d+$")
+                    (tonumber value))
+                (.. "\"" value "\"")  ;; Quote numeric-looking strings
                 value))
         (= (type value) "number")
         (tostring value)
@@ -86,8 +87,10 @@
         (string.gsub (string.match trimmed "^\"(.*)\"$") "\\\"" "\"")
         (string.match trimmed "^'(.*)'$")
         (string.match trimmed "^'(.*)'$")
-        ;; Number
-        (tonumber trimmed)
+        ;; Number (decimal/float, but NOT values with leading zeros like "00001505"
+        ;; which would lose information via tonumber)
+        (and (string.match trimmed "^%-?%d+%.?%d*$")
+             (not (string.match trimmed "^%-?0%d")))
         (tonumber trimmed)
         ;; Plain string
         trimmed)))
