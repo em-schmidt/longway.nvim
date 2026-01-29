@@ -10,6 +10,9 @@ end
 M.create = function(story_id, data)
   return client.post(string.format("/stories/%s/comments", tostring(story_id)), {body = data})
 end
+M.update = function(story_id, comment_id, data)
+  return client.put(string.format("/stories/%s/comments/%s", tostring(story_id), tostring(comment_id)), {body = data})
+end
 M.delete = function(story_id, comment_id)
   return client.delete(string.format("/stories/%s/comments/%s", tostring(story_id), tostring(comment_id)))
 end
@@ -25,6 +28,19 @@ M["batch-create"] = function(story_id, comments)
     end
   end
   return {ok = (#errors == 0), created = created, errors = errors}
+end
+M["batch-update"] = function(story_id, comments)
+  local updated = {}
+  local errors = {}
+  for _, cmt in ipairs(comments) do
+    local result = M.update(story_id, cmt.id, {text = cmt.text})
+    if result.ok then
+      table.insert(updated, result.data)
+    else
+      table.insert(errors, string.format("Comment %s: %s", tostring(cmt.id), (result.error or "unknown error")))
+    end
+  end
+  return {ok = (#errors == 0), updated = updated, errors = errors}
 end
 M["batch-delete"] = function(story_id, comment_ids)
   local deleted = {}

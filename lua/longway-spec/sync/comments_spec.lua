@@ -106,9 +106,9 @@ local function _1_()
     local function _16_()
       local diff = {created = {}, deleted = {}, edited = {{id = 1}}, unchanged = {}}
       local has_changes_3f = comments_sync["has-changes?"]
-      return assert.is_false(has_changes_3f(diff))
+      return assert.is_true(has_changes_3f(diff))
     end
-    it("returns false when only edits (no creates or deletes)", _16_)
+    it("returns true when there are edited comments", _16_)
     local function _17_()
       local diff = {created = {}, deleted = {}, edited = {}, unchanged = {{id = 1}}}
       local has_changes_3f = comments_sync["has-changes?"]

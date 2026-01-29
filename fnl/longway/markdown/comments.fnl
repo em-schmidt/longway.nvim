@@ -29,30 +29,49 @@
 
 (fn M.parse-block [block]
   "Parse a comment block into structured data
-   Format:
-   ---
-   **Author Name** · 2026-01-18 10:30 <!-- comment:123 -->
+   Supports two formats:
+   1. Full format with header: **Author** · timestamp <!-- comment:ID -->
+   2. Bare format (new comments only): just the comment text
 
-   Comment text here
-   Returns: {:id number|nil :author string :timestamp string :text string :is_new bool} or nil"
+   Bare blocks are treated as new comments with author/timestamp set on push.
+   Returns: {:id number|nil :author string|nil :timestamp string|nil :text string :is_new bool} or nil"
   (let [lines []]
     (var found-header false)
     (var header-data nil)
     (each [line (string.gmatch (.. block "\n") "([^\n]*)\n")]
       (if (not found-header)
           (let [parsed (parse-comment-metadata line)]
-            (when parsed
-              (set found-header true)
-              (set header-data parsed)))
+            (if parsed
+                (do
+                  (set found-header true)
+                  (set header-data parsed))
+                ;; No header found - collect as body text for bare block
+                (when (not (string.match line "^%s*$"))
+                  (table.insert lines line))))
           ;; Collect body lines (skip empty lines at start)
           (when (or (> (length lines) 0) (not (string.match line "^%s*$")))
             (table.insert lines line))))
-    (when header-data
-      (set header-data.text (table.concat lines "\n"))
-      header-data)))
+
+    ;; Return parsed comment
+    (if header-data
+        ;; Full format with header
+        (do
+          (set header-data.text (table.concat lines "\n"))
+          header-data)
+        ;; Bare format - treat as new comment if there's meaningful text
+        ;; (skip separator-only blocks like "---")
+        (let [text (string.gsub (table.concat lines "\n") "^%s*(.-)%s*$" "%1")]
+          (when (and (> (length text) 0)
+                     (not (string.match text "^%-%-%-+$")))
+            {:id nil
+             :author nil
+             :timestamp nil
+             :text text
+             :is_new true})))))
 
 (fn M.parse-section [content]
   "Parse comments from a comments section content (between sync markers)
+   Supports both full-format comments (with header) and bare comments (text only).
    Returns: [comment, ...]"
   (let [comments []
         ;; Split by --- separator
@@ -61,13 +80,6 @@
       (let [cmt (M.parse-block block)]
         (when cmt
           (table.insert comments cmt))))
-    ;; Warn when content exists but no comments were parsed (likely format issue)
-    (when (and (= (length comments) 0)
-               (string.match content "%S"))
-      (let [(ok notify) (pcall require :longway.ui.notify)]
-        (when ok
-          (notify.warn
-            "Comments section has content but no comments were parsed. Expected format: **Author** · YYYY-MM-DD HH:MM <!-- comment:new -->"))))
     comments))
 
 ;;; ============================================================================
@@ -140,11 +152,23 @@
 
 (fn M.render-comments [comments]
   "Render a list of comments as markdown
+   Comments are sorted chronologically (oldest first) by timestamp.
+   New comments (nil timestamp) are placed at the end.
    Returns: string with separator-delimited comment blocks"
   (if (or (not comments) (= (length comments) 0))
       ""
-      (let [rendered []]
-        (each [_ cmt (ipairs comments)]
+      (let [;; Sort by timestamp (oldest first), nil timestamps go to end
+            sorted (do
+                     (let [copy []]
+                       (each [_ c (ipairs comments)]
+                         (table.insert copy c))
+                       (table.sort copy (fn [a b]
+                                          (let [ta (or a.timestamp "~")
+                                                tb (or b.timestamp "~")]
+                                            (< ta tb))))
+                       copy))
+            rendered []]
+        (each [_ cmt (ipairs sorted)]
           (table.insert rendered (M.render-comment cmt)))
         (table.concat rendered "\n\n"))))
 
@@ -163,10 +187,24 @@
 
 (fn M.format-api-comments [raw-comments]
   "Convert raw API comments to rendering-ready format with author resolution
-   raw-comments: [{:id :text :author_id :created_at}]
+   Comments are sorted chronologically (oldest first) by created_at.
+   Deleted comments (soft-deleted via API) are filtered out.
+   raw-comments: [{:id :text :author_id :created_at :deleted}]
    Returns: [{:id :author :timestamp :text :is_new}]"
-  (let [formatted []]
-    (each [_ cmt (ipairs (or raw-comments []))]
+  (let [comments (or raw-comments [])
+        ;; Filter out deleted comments (Shortcut uses soft delete)
+        active (icollect [_ c (ipairs comments)]
+                 (when (not c.deleted) c))
+        ;; Sort by created_at (ISO 8601 strings sort correctly lexicographically)
+        sorted (do
+                 (let [copy []]
+                   (each [_ c (ipairs active)]
+                     (table.insert copy c))
+                   (table.sort copy (fn [a b]
+                                      (< (or a.created_at "") (or b.created_at ""))))
+                   copy))
+        formatted []]
+    (each [_ cmt (ipairs sorted)]
       (let [author-name (M.resolve-author-name cmt.author_id)
             timestamp (M.format-timestamp cmt.created_at)]
         (table.insert formatted
@@ -183,7 +221,6 @@
 
 (fn M.comment-changed? [local-comment remote-comment]
   "Check if a local comment has text changes compared to remote
-   Note: Shortcut API does not support editing comments, so edits trigger warnings.
    Returns: bool"
   (let [local-text (string.gsub (or local-comment.text "") "^%s*(.-)%s*$" "%1")
         remote-text (string.gsub (or remote-comment.text "") "^%s*(.-)%s*$" "%1")]

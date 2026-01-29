@@ -116,7 +116,7 @@ Each entity type has one module owning all parsing and rendering:
 
 ### Comment Sync Notes
 
-- Shortcut API does not support editing comments — edits trigger a warning, not an API call
+- Comment edits are synced to Shortcut via the Update Story Comment API endpoint
 - Authors are pre-resolved from UUID to display name via `members.resolve-name` before reaching the renderer
 - Comments use `comments_hash` in frontmatter for change detection (parallel to `tasks_hash`)
 - Timestamp formatting uses `os.date` with `config.comments.timestamp_format` (strftime format)

@@ -52,7 +52,7 @@ M.diff = function(local_comments, remote_comments)
   return {created = created, deleted = deleted, edited = edited, unchanged = unchanged}
 end
 M["has-changes?"] = function(diff)
-  return ((#diff.created > 0) or (#diff.deleted > 0))
+  return ((#diff.created > 0) or (#diff.edited > 0) or (#diff.deleted > 0))
 end
 local function push_created_comments(story_id, comments)
   local result_comments = {}
@@ -62,6 +62,10 @@ local function push_created_comments(story_id, comments)
     if result.ok then
       cmt.id = result.data.id
       cmt.is_new = false
+      if result.data.author_id then
+        cmt.author = comments_md["resolve-author-name"](result.data.author_id)
+      else
+      end
       if result.data.created_at then
         cmt.timestamp = comments_md["format-timestamp"](result.data.created_at)
       else
@@ -69,6 +73,23 @@ local function push_created_comments(story_id, comments)
       table.insert(result_comments, cmt)
     else
       table.insert(errors, string.format("Create comment: %s", (result.error or "unknown error")))
+    end
+  end
+  return {ok = (#errors == 0), comments = result_comments, errors = errors}
+end
+local function push_edited_comments(story_id, comments)
+  local result_comments = {}
+  local errors = {}
+  for _, cmt in ipairs(comments) do
+    local result = comments_api.update(story_id, cmt.id, {text = cmt.text})
+    if result.ok then
+      if result.data.updated_at then
+        cmt.timestamp = comments_md["format-timestamp"](result.data.updated_at)
+      else
+      end
+      table.insert(result_comments, cmt)
+    else
+      table.insert(errors, string.format("Update comment %s: %s", tostring(cmt.id), (result.error or "unknown error")))
     end
   end
   return {ok = (#errors == 0), comments = result_comments, errors = errors}
@@ -92,11 +113,7 @@ M.push = function(story_id, local_comments, remote_comments, opts)
   local all_errors = {}
   local result_comments = {}
   if not M["has-changes?"](diff) then
-    if (#diff.edited > 0) then
-      notify.warn(string.format("%d comment(s) edited locally. Shortcut does not support comment editing \226\128\148 changes will not sync.", #diff.edited))
-    else
-    end
-    return {ok = true, created = 0, deleted = 0, warned = #diff.edited, errors = {}, comments = local_comments}
+    return {ok = true, created = 0, edited = 0, deleted = 0, errors = {}, comments = local_comments}
   else
   end
   if (#diff.created > 0) then
@@ -114,9 +131,13 @@ M.push = function(story_id, local_comments, remote_comments, opts)
     table.insert(result_comments, cmt)
   end
   if (#diff.edited > 0) then
-    notify.warn(string.format("%d comment(s) edited locally. Shortcut does not support comment editing \226\128\148 changes will not sync.", #diff.edited))
-    for _, cmt in ipairs(diff.edited) do
+    notify.info(string.format("Updating %d comment(s)...", #diff.edited))
+    local edit_result = push_edited_comments(story_id, diff.edited)
+    for _, cmt in ipairs(edit_result.comments) do
       table.insert(result_comments, cmt)
+    end
+    for _, err in ipairs(edit_result.errors) do
+      table.insert(all_errors, err)
     end
   else
   end
@@ -131,13 +152,13 @@ M.push = function(story_id, local_comments, remote_comments, opts)
   else
   end
   local created_count = #diff.created
-  local warned_count = #diff.edited
+  local edited_count = #diff.edited
   if (#all_errors == 0) then
-    notify.info(string.format("Comments synced: %d created, %d deleted", created_count, deleted_count))
+    notify.info(string.format("Comments synced: %d created, %d updated, %d deleted", created_count, edited_count, deleted_count))
   else
     notify.warn(string.format("Comment sync completed with %d error(s)", #all_errors))
   end
-  return {ok = (#all_errors == 0), created = created_count, deleted = deleted_count, warned = warned_count, errors = all_errors, comments = result_comments}
+  return {ok = (#all_errors == 0), created = created_count, edited = edited_count, deleted = deleted_count, errors = all_errors, comments = result_comments}
 end
 M.pull = function(story_id)
   local cfg = config.get()

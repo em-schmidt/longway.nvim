@@ -23,8 +23,7 @@
 
 (fn M.diff [local-comments remote-comments]
   "Compute the diff between local and remote comments
-   Returns: {:created [comments] :deleted [comment-ids] :edited [comments] :unchanged [comments]}
-   Note: 'edited' comments generate warnings — Shortcut API does not support editing."
+   Returns: {:created [comments] :deleted [comment-ids] :edited [comments] :unchanged [comments]}"
   (let [remote-map (build-remote-comment-map remote-comments)
         seen-ids {}
         created []
@@ -63,9 +62,10 @@
      :unchanged unchanged}))
 
 (fn M.has-changes? [diff]
-  "Check if a diff contains any changes
+  "Check if a diff contains any changes (created, edited, or deleted)
    Returns: bool"
   (or (> (length diff.created) 0)
+      (> (length diff.edited) 0)
       (> (length diff.deleted) 0)))
 
 ;;; ============================================================================
@@ -84,11 +84,35 @@
             (do
               (set cmt.id result.data.id)
               (set cmt.is_new false)
-              ;; Update author/timestamp from server response
+              ;; Update author from server response (handles bare blocks with nil author)
+              (when result.data.author_id
+                (set cmt.author (comments-md.resolve-author-name result.data.author_id)))
+              ;; Update timestamp from server response
               (when result.data.created_at
                 (set cmt.timestamp (comments-md.format-timestamp result.data.created_at)))
               (table.insert result-comments cmt))
             (table.insert errors (string.format "Create comment: %s"
+                                                (or result.error "unknown error"))))))
+    {:ok (= (length errors) 0)
+     :comments result-comments
+     :errors errors}))
+
+(fn push-edited-comments [story-id comments]
+  "Update edited comments via API
+   Returns: {:ok bool :comments [updated comments] :errors [string]}"
+  (let [result-comments []
+        errors []]
+    (each [_ cmt (ipairs comments)]
+      (let [result (comments-api.update story-id cmt.id {:text cmt.text})]
+        (if result.ok
+            ;; Update local comment with response data
+            (do
+              ;; Update timestamp if server returns updated_at
+              (when result.data.updated_at
+                (set cmt.timestamp (comments-md.format-timestamp result.data.updated_at)))
+              (table.insert result-comments cmt))
+            (table.insert errors (string.format "Update comment %s: %s"
+                                                (tostring cmt.id)
                                                 (or result.error "unknown error"))))))
     {:ok (= (length errors) 0)
      :comments result-comments
@@ -116,19 +140,15 @@
    local-comments: Comments parsed from local markdown
    remote-comments: Comments from Shortcut API
    opts: {:confirm_delete bool :skip_delete bool}
-   Returns: {:ok bool :created n :deleted n :warned n :errors [] :comments [updated comment list]}"
+   Returns: {:ok bool :created n :edited n :deleted n :errors [] :comments [updated comment list]}"
   (let [opts (or opts {})
         diff (M.diff local-comments remote-comments)
         all-errors []
         result-comments []]
 
-    ;; If no changes (ignoring edits), return early
+    ;; If no changes, return early
     (when (not (M.has-changes? diff))
-      ;; Still warn about edits
-      (when (> (length diff.edited) 0)
-        (notify.warn (string.format "%d comment(s) edited locally. Shortcut does not support comment editing — changes will not sync."
-                                    (length diff.edited))))
-      (lua "return {ok = true, created = 0, deleted = 0, warned = #diff.edited, errors = {}, comments = local_comments}"))
+      (lua "return {ok = true, created = 0, edited = 0, deleted = 0, errors = {}, comments = local_comments}"))
 
     ;; Create new comments
     (when (> (length diff.created) 0)
@@ -143,12 +163,14 @@
     (each [_ cmt (ipairs diff.unchanged)]
       (table.insert result-comments cmt))
 
-    ;; Handle edited comments (keep local version but warn)
+    ;; Update edited comments
     (when (> (length diff.edited) 0)
-      (notify.warn (string.format "%d comment(s) edited locally. Shortcut does not support comment editing — changes will not sync."
-                                  (length diff.edited)))
-      (each [_ cmt (ipairs diff.edited)]
-        (table.insert result-comments cmt)))
+      (notify.info (string.format "Updating %d comment(s)..." (length diff.edited)))
+      (let [edit-result (push-edited-comments story-id diff.edited)]
+        (each [_ cmt (ipairs edit-result.comments)]
+          (table.insert result-comments cmt))
+        (each [_ err (ipairs edit-result.errors)]
+          (table.insert all-errors err))))
 
     ;; Delete removed comments (if not skipped)
     (var deleted-count 0)
@@ -161,16 +183,16 @@
 
     ;; Report results
     (let [created-count (length diff.created)
-          warned-count (length diff.edited)]
+          edited-count (length diff.edited)]
       (if (= (length all-errors) 0)
-          (notify.info (string.format "Comments synced: %d created, %d deleted"
-                                      created-count deleted-count))
+          (notify.info (string.format "Comments synced: %d created, %d updated, %d deleted"
+                                      created-count edited-count deleted-count))
           (notify.warn (string.format "Comment sync completed with %d error(s)" (length all-errors))))
 
       {:ok (= (length all-errors) 0)
        :created created-count
+       :edited edited-count
        :deleted deleted-count
-       :warned warned-count
        :errors all-errors
        :comments result-comments})))
 

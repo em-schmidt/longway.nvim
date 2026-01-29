@@ -35,6 +35,10 @@ M["parse-block"] = function(block)
         found_header = true
         header_data = parsed
       else
+        if not string.match(line, "^%s*$") then
+          table.insert(lines, line)
+        else
+        end
       end
     else
       if ((#lines > 0) or not string.match(line, "^%s*$")) then
@@ -47,7 +51,12 @@ M["parse-block"] = function(block)
     header_data.text = table.concat(lines, "\n")
     return header_data
   else
-    return nil
+    local text = string.gsub(table.concat(lines, "\n"), "^%s*(.-)%s*$", "%1")
+    if ((#text > 0) and not string.match(text, "^%-%-%-+$")) then
+      return {id = nil, author = nil, timestamp = nil, text = text, is_new = true}
+    else
+      return nil
+    end
   end
 end
 M["parse-section"] = function(content)
@@ -59,14 +68,6 @@ M["parse-section"] = function(content)
       table.insert(comments, cmt)
     else
     end
-  end
-  if ((#comments == 0) and string.match(content, "%S")) then
-    local ok, notify = pcall(require, "longway.ui.notify")
-    if ok then
-      notify.warn("Comments section has content but no comments were parsed. Expected format: **Author** \194\183 YYYY-MM-DD HH:MM <!-- comment:new -->")
-    else
-    end
-  else
   end
   return comments
 end
@@ -128,8 +129,22 @@ M["render-comments"] = function(comments)
   if (not comments or (#comments == 0)) then
     return ""
   else
+    local sorted
+    do
+      local copy = {}
+      for _, c in ipairs(comments) do
+        table.insert(copy, c)
+      end
+      local function _19_(a, b)
+        local ta = (a.timestamp or "~")
+        local tb = (b.timestamp or "~")
+        return (ta < tb)
+      end
+      table.sort(copy, _19_)
+      sorted = copy
+    end
     local rendered = {}
-    for _, cmt in ipairs(comments) do
+    for _, cmt in ipairs(sorted) do
       table.insert(rendered, M["render-comment"](cmt))
     end
     return table.concat(rendered, "\n\n")
@@ -143,8 +158,40 @@ M["render-section"] = function(comments)
   return (start_marker .. "\n" .. content .. "\n" .. end_marker)
 end
 M["format-api-comments"] = function(raw_comments)
+  local comments = (raw_comments or {})
+  local active
+  do
+    local tbl_26_ = {}
+    local i_27_ = 0
+    for _, c in ipairs(comments) do
+      local val_28_
+      if not c.deleted then
+        val_28_ = c
+      else
+        val_28_ = nil
+      end
+      if (nil ~= val_28_) then
+        i_27_ = (i_27_ + 1)
+        tbl_26_[i_27_] = val_28_
+      else
+      end
+    end
+    active = tbl_26_
+  end
+  local sorted
+  do
+    local copy = {}
+    for _, c in ipairs(active) do
+      table.insert(copy, c)
+    end
+    local function _23_(a, b)
+      return ((a.created_at or "") < (b.created_at or ""))
+    end
+    table.sort(copy, _23_)
+    sorted = copy
+  end
   local formatted = {}
-  for _, cmt in ipairs((raw_comments or {})) do
+  for _, cmt in ipairs(sorted) do
     local author_name = M["resolve-author-name"](cmt.author_id)
     local timestamp = M["format-timestamp"](cmt.created_at)
     table.insert(formatted, {id = cmt.id, author = author_name, timestamp = timestamp, text = safe_text(cmt.text), is_new = false})

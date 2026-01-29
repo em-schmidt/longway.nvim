@@ -34,9 +34,28 @@
               (assert.is_true result.is_new)
               (assert.equals "Brand new comment." result.text))))
 
-        (it "returns nil for invalid block"
+        (it "parses a bare comment block as new"
           (fn []
-            (let [block "Just plain text without metadata"
+            (let [block "This is a bare comment without header."
+                  result (comments-md.parse-block block)]
+              (assert.is_not_nil result)
+              (assert.is_nil result.id)
+              (assert.is_nil result.author)
+              (assert.is_nil result.timestamp)
+              (assert.equals "This is a bare comment without header." result.text)
+              (assert.is_true result.is_new))))
+
+        (it "parses bare block with leading whitespace"
+          (fn []
+            (let [block "\n  \nActual comment text here."
+                  result (comments-md.parse-block block)]
+              (assert.is_not_nil result)
+              (assert.equals "Actual comment text here." result.text)
+              (assert.is_true result.is_new))))
+
+        (it "returns nil for empty bare block"
+          (fn []
+            (let [block "   \n  \n  "
                   result (comments-md.parse-block block)]
               (assert.is_nil result))))
 
@@ -109,7 +128,31 @@
         (it "returns empty string for no comments"
           (fn []
             (assert.equals "" (comments-md.render-comments []))
-            (assert.equals "" (comments-md.render-comments nil))))))
+            (assert.equals "" (comments-md.render-comments nil))))
+
+        (it "sorts comments chronologically (oldest first)"
+          (fn []
+            ;; Input in wrong order (newest first)
+            (let [cmts [{:id 3 :author "C" :timestamp "2026-01-03 10:00" :text "Newest" :is_new false}
+                        {:id 1 :author "A" :timestamp "2026-01-01 10:00" :text "Oldest" :is_new false}
+                        {:id 2 :author "B" :timestamp "2026-01-02 10:00" :text "Middle" :is_new false}]
+                  result (comments-md.render-comments cmts)
+                  oldest-pos (string.find result "Oldest")
+                  middle-pos (string.find result "Middle")
+                  newest-pos (string.find result "Newest")]
+              ;; Oldest should come first, then middle, then newest
+              (assert.is_true (< oldest-pos middle-pos))
+              (assert.is_true (< middle-pos newest-pos)))))
+
+        (it "places new comments (nil timestamp) at the end"
+          (fn []
+            (let [cmts [{:id nil :author nil :timestamp nil :text "New comment" :is_new true}
+                        {:id 1 :author "A" :timestamp "2026-01-01 10:00" :text "Existing" :is_new false}]
+                  result (comments-md.render-comments cmts)
+                  existing-pos (string.find result "Existing")
+                  new-pos (string.find result "New comment")]
+              ;; Existing comment should come before new comment
+              (assert.is_true (< existing-pos new-pos)))))))
 
     (describe "render-section"
       (fn []
@@ -295,6 +338,43 @@
                     raw [{:id 1 :text "Test" :author_id "unknown-uuid" :created_at "2026-01-10T10:30:00Z"}]
                     result (format-api-comments raw)]
                 (assert.equals "unknown-uuid" (. result 1 :author))
+                (set members.resolve-name original-resolve)))))
+
+        (it "sorts comments chronologically (oldest first)"
+          (fn []
+            (let [members (require :longway.api.members)
+                  original-resolve members.resolve-name]
+              (set members.resolve-name (fn [id] id))
+              (let [format-api-comments (. comments-md "format-api-comments")
+                    ;; Input in reverse chronological order (newest first)
+                    raw [{:id 3 :text "Newest" :author_id "a" :created_at "2026-01-12T10:00:00Z"}
+                         {:id 1 :text "Oldest" :author_id "a" :created_at "2026-01-10T10:00:00Z"}
+                         {:id 2 :text "Middle" :author_id "a" :created_at "2026-01-11T10:00:00Z"}]
+                    result (format-api-comments raw)]
+                ;; Should be sorted oldest first
+                (assert.equals 1 (. result 1 :id))
+                (assert.equals "Oldest" (. result 1 :text))
+                (assert.equals 2 (. result 2 :id))
+                (assert.equals "Middle" (. result 2 :text))
+                (assert.equals 3 (. result 3 :id))
+                (assert.equals "Newest" (. result 3 :text))
+                (set members.resolve-name original-resolve)))))
+
+        (it "filters out deleted comments (soft delete)"
+          (fn []
+            (let [members (require :longway.api.members)
+                  original-resolve members.resolve-name]
+              (set members.resolve-name (fn [id] id))
+              (let [format-api-comments (. comments-md "format-api-comments")
+                    ;; Mix of active and deleted comments
+                    raw [{:id 1 :text "Active" :author_id "a" :created_at "2026-01-10T10:00:00Z" :deleted false}
+                         {:id 2 :text "" :author_id "a" :created_at "2026-01-11T10:00:00Z" :deleted true}
+                         {:id 3 :text "Also active" :author_id "a" :created_at "2026-01-12T10:00:00Z"}]
+                    result (format-api-comments raw)]
+                ;; Should only have 2 comments (deleted one filtered out)
+                (assert.equals 2 (length result))
+                (assert.equals 1 (. result 1 :id))
+                (assert.equals 3 (. result 2 :id))
                 (set members.resolve-name original-resolve)))))))
 
     (describe "resolve-author-name"
