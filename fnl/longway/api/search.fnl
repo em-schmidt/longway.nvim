@@ -37,6 +37,18 @@
    :current :current-iteration
    :backlog :backlog-iteration})
 
+(fn extract-next-token [next-value]
+  "Extract the pagination token from a next cursor.
+   Shortcut returns full URL paths like '/api/v3/search/stories?...&next=TOKEN'
+   but the API expects just the token value.
+   Returns: token string or nil"
+  (when next-value
+    ;; If it looks like a URL path, extract the next= parameter
+    (if (string.find next-value "^/api/")
+        (or (string.match next-value "[?&]next=([^&]+)") next-value)
+        ;; Otherwise assume it's already just the token
+        next-value)))
+
 (fn parse-query-string [query-str]
   "Parse a query string like 'owner:me state:started' into a table
    Returns: table of field -> value pairs"
@@ -98,7 +110,7 @@
                   (table.insert all-stories story)))
               ;; Check for more pages
               (if (and data.next (> (length stories) 0))
-                  (set cursor data.next)
+                  (set cursor (extract-next-token data.next))
                   (set done true))))))
 
     (if error

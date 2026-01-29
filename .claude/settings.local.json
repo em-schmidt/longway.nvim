@@ -17,7 +17,9 @@
       "Bash(done)",
       "Bash(./scripts/compile:*)",
       "WebSearch",
-      "WebFetch(domain:developer.shortcut.com)"
+      "WebFetch(domain:developer.shortcut.com)",
+      "WebFetch(domain:help.shortcut.com)",
+      "WebFetch(domain:api.app.shortcut.com)"
     ]
   }
 }

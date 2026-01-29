@@ -3,6 +3,17 @@ local client = require("longway.api.client")
 local M = {}
 local QUERY_FIELDS = {owner = "owner_id", owner_id = "owner_id", state = "workflow_state_id", state_id = "workflow_state_id", workflow_state = "workflow_state_id", iteration = "iteration_id", iteration_id = "iteration_id", sprint = "iteration_id", team = "group_id", team_id = "group_id", group = "group_id", group_id = "group_id", epic = "epic_id", epic_id = "epic_id", type = "story_type", story_type = "story_type", label = "label_id", label_id = "label_id", project = "project_id", project_id = "project_id", archived = "archived", completed = "completed", started = "started"}
 local SPECIAL_VALUES = {me = "current-member", current = "current-iteration", backlog = "backlog-iteration"}
+local function extract_next_token(next_value)
+  if next_value then
+    if string.find(next_value, "^/api/") then
+      return (string.match(next_value, "[?&]next=([^&]+)") or next_value)
+    else
+      return next_value
+    end
+  else
+    return nil
+  end
+end
 local function parse_query_string(query_str)
   local params = {}
   if (query_str and (#query_str > 0)) then
@@ -59,7 +70,7 @@ M["search-stories-all"] = function(query, opts)
         end
       end
       if (data.next and (#stories > 0)) then
-        cursor = data.next
+        cursor = extract_next_token(data.next)
       else
         done = true
       end
@@ -90,13 +101,13 @@ M["build-query"] = function(filters)
     if (value and (value ~= "")) then
       if ((field == "archived") or (field == "completed") or (field == "started")) then
         if value then
-          local _12_
+          local _14_
           if value then
-            _12_ = "true"
+            _14_ = "true"
           else
-            _12_ = "false"
+            _14_ = "false"
           end
-          table.insert(parts, (field .. ":" .. _12_))
+          table.insert(parts, (field .. ":" .. _14_))
         else
         end
       else
