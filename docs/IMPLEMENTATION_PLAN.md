@@ -431,12 +431,11 @@ Create `fnl/longway/ui/progress.fnl`:
 - [ ] Add confirmation for batch operations
 - [ ] Show batch operation summary
 
-### 7.3 Offline Queue
+### 7.3 Story Status
 
 **Tasks:**
-- [ ] Queue push operations when offline
-- [ ] Detect network availability
-- [ ] Flush queue when online
+- [ ] Add story status to story markdown frontmatter
+- [ ] Add picker for changing story status
 
 ### 7.4 Rate Limit Handling
 
@@ -458,10 +457,7 @@ Create `fnl/longway/api/rate_limit.fnl`:
 ### 7.6 Test Coverage
 
 **Tasks:**
-- [ ] Set up testing framework (plenary.test or busted)
-- [ ] Add unit tests for markdown parsing
-- [ ] Add unit tests for sync logic
-- [ ] Add integration tests with mock API
+- [ ] Review current test coverage for gaps, document any opportunities for improvements
 
 **Phase 7 Deliverables:**
 - Vimdiff-based conflict resolution
