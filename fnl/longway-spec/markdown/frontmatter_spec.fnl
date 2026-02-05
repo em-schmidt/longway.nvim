@@ -70,7 +70,37 @@ name: test
 body"
                   result (frontmatter.parse content)]
               (assert.is_not_nil result.raw_frontmatter)
-              (assert.has_substring result.raw_frontmatter "id: 123"))))))
+              (assert.has_substring result.raw_frontmatter "id: 123"))))
+
+        (it "strips leading and trailing whitespace from body"
+          (fn []
+            (let [content "---
+id: 123
+---
+
+# Title"
+                  result (frontmatter.parse content)]
+              ;; Body should be "# Title" without leading/trailing whitespace
+              (assert.equals "# Title" result.body))))
+
+        (it "prevents blank line accumulation on parse-render cycles"
+          (fn []
+            (let [initial-fm {:shortcut_id 12345 :story_type "feature"}
+                  ;; Generate initial content
+                  generated (frontmatter.generate initial-fm)
+                  initial-content (.. generated "\n\n" "# Test Story")
+                  ;; Parse it
+                  parsed1 (frontmatter.parse initial-content)
+                  ;; Re-generate (simulating an update)
+                  regenerated (frontmatter.generate parsed1.frontmatter)
+                  updated-content (.. regenerated "\n\n" parsed1.body)
+                  ;; Parse again
+                  parsed2 (frontmatter.parse updated-content)]
+              ;; After parse-render cycle, body should remain the same
+              (assert.equals parsed1.body parsed2.body)
+              ;; And the full content should have exactly 2 newlines between --- and #
+              (let [pattern "%-%-%-\n\n# Test Story"]
+                (assert.is_not_nil (string.find updated-content pattern 1 true))))))))
 
     (describe "generate"
       (fn []
