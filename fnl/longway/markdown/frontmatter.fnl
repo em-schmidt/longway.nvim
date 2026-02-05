@@ -107,7 +107,9 @@
           (if (not end-start)
               {:frontmatter {} :body content :raw_frontmatter nil}
               (let [yaml-content (string.sub content 5 (- end-start 1))
-                    body (string.sub content (+ end-start 5))
+                    raw-body (string.sub content (+ end-start 5))
+                    ;; Strip leading/trailing whitespace to prevent blank line accumulation
+                    body (string.gsub raw-body "^%s*(.-)%s*$" "%1")
                     frontmatter {}]
                 ;; Mutable state for parsing
                 (var current-key nil)

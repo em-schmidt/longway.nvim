@@ -123,7 +123,8 @@ M.parse = function(content)
       return {frontmatter = {}, body = content, raw_frontmatter = nil}
     else
       local yaml_content = string.sub(content, 5, (end_start - 1))
-      local body = string.sub(content, (end_start + 5))
+      local raw_body = string.sub(content, (end_start + 5))
+      local body = string.gsub(raw_body, "^%s*(.-)%s*$", "%1")
       local frontmatter = {}
       local current_key = nil
       local current_list = nil
