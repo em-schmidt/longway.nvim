@@ -1,15 +1,16 @@
 
 # Current Issues/TODOs:
 
-- [ ] `:LongwayPicker presets` throws the following error when selecting a preset: 
+- [ ] `:LongwayPicker presets` and `:LongwaySync` both throw the following error 
     E5108: Error executing lua: Vim:E117: Unknown function: ref
 stack traceback:
         [C]: in function 'ref'
         ...rs/eric/workspace/longway.nvim/lua/longway/sync/pull.lua:201: in function 'fn'
         ...ic/.local/share/nvim/lazy/snacks.nvim/lua/snacks/win.lua:362: in function <...ic/.local/share/nvim/lazy/snacks.nvim/lua/snacks/win.lua:357>
 
-- [ ] Automatic story sync for default preset only shows initial progress '[longway] Syngin: 0/100..', no stories sync, no progres updates happen.
+- [ ] Automatic story sync for default preset only shows initial progress '[longway] Syncing: 0/100..', no stories sync, no progress updates happen.
 
+- [ ] `:LongwayRefresh` overwrites and or removes Local Notes
 
 # Completed Issues/TODOs:
 
