@@ -12,6 +12,13 @@ stack traceback:
 
 - [ ] `:LongwayRefresh` overwrites and or removes Local Notes
 
+- [ ] Picking an epic in the `:LongwayPicker epics` thows
+    E5108: Error executing lua: vim/_editor.lua:0: nvim_exec2(), line 1: Vim(edit):E37: No write since last change (add ! to override)
+stack traceback:
+        [C]: in function 'nvim_exec2'
+        vim/_editor.lua: in function 'fn'
+        ...ic/.local/share/nvim/lazy/snacks.nvim/lua/snacks/win.lua:362: in function <...ic/.local/share/nvim/lazy/snacks.nvim/lua/snacks/win.lua:357>
+
 # Completed Issues/TODOs:
 
 - [x] Comments created in markdown are not syncing to shortcut, no errors are produced.
