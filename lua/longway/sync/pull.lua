@@ -198,23 +198,21 @@ M["sync-stories"] = function(query, opts)
     local stories = result.data
     local total = #stories
     local progress_id = progress.start("Syncing", total)
-    local synced_count = vim.fn.ref(0)
-    local failed_count = vim.fn.ref(0)
     local errors = {}
+    local synced, failed = 0, 0
     for i, story in ipairs(stories) do
       progress.update(progress_id, i, total, (story.name or tostring(story.id)))
       local pull_result = M["pull-story"](story.id)
       if pull_result.ok then
-        vim.fn.setreg(synced_count, (vim.fn.getreg(synced_count) + 1))
+        synced, failed = (synced + 1), failed
       else
-        vim.fn.setreg(failed_count, (vim.fn.getreg(failed_count) + 1))
         table.insert(errors, string.format("Story %s: %s", story.id, (pull_result.error or "unknown error")))
+        synced, failed = synced, (failed + 1)
       end
     end
-    local synced = vim.fn.getreg(synced_count)
-    local failed = vim.fn.getreg(failed_count)
-    progress.finish(progress_id, synced, failed)
-    return {ok = true, synced = synced, failed = failed, errors = errors, total = total}
+    local synced_count, failed_count = synced, failed
+    progress.finish(progress_id, synced_count, failed_count)
+    return {ok = true, synced = synced_count, failed = failed_count, errors = errors, total = total}
   end
 end
 M["sync-preset"] = function(preset_name)

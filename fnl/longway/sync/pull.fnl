@@ -210,28 +210,24 @@
           (let [stories result.data
                 total (length stories)
                 progress-id (progress.start "Syncing" total)
-                synced-count (vim.fn.ref 0)
-                failed-count (vim.fn.ref 0)
-                errors []]
-
-            ;; Process each story with progress tracking
-            (each [i story (ipairs stories)]
-              (progress.update progress-id i total (or story.name (tostring story.id)))
-              (let [pull-result (M.pull-story story.id)]
-                (if pull-result.ok
-                    (vim.fn.setreg synced-count (+ (vim.fn.getreg synced-count) 1))
-                    (do
-                      (vim.fn.setreg failed-count (+ (vim.fn.getreg failed-count) 1))
-                      (table.insert errors (string.format "Story %s: %s" story.id (or pull-result.error "unknown error")))))))
-
-            (let [synced (vim.fn.getreg synced-count)
-                  failed (vim.fn.getreg failed-count)]
-              (progress.finish progress-id synced failed)
-              {:ok true
-               :synced synced
-               :failed failed
-               :errors errors
-               :total total}))))))
+                errors []
+                (synced-count failed-count)
+                (accumulate [(synced failed) (values 0 0)
+                             i story (ipairs stories)]
+                  (do
+                    (progress.update progress-id i total (or story.name (tostring story.id)))
+                    (let [pull-result (M.pull-story story.id)]
+                      (if pull-result.ok
+                          (values (+ synced 1) failed)
+                          (do
+                            (table.insert errors (string.format "Story %s: %s" story.id (or pull-result.error "unknown error")))
+                            (values synced (+ failed 1)))))))]
+            (progress.finish progress-id synced-count failed-count)
+            {:ok true
+             :synced synced-count
+             :failed failed-count
+             :errors errors
+             :total total})))))
 
 (fn M.sync-preset [preset-name]
   "Sync stories using a named preset from config
