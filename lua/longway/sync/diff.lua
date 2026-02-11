@@ -12,9 +12,9 @@ end
 M["detect-local-changes"] = function(parsed)
   local fm = parsed.frontmatter
   local current = M["compute-section-hashes"](parsed)
-  local stored_desc = tostring((fm.sync_hash or ""))
-  local stored_tasks = tostring((fm.tasks_hash or ""))
-  local stored_comments = tostring((fm.comments_hash or ""))
+  local stored_desc = hash["normalize-stored-hash"](fm.sync_hash)
+  local stored_tasks = hash["normalize-stored-hash"](fm.tasks_hash)
+  local stored_comments = hash["normalize-stored-hash"](fm.comments_hash)
   return {description = ((#stored_desc > 0) and (current.description ~= stored_desc)), tasks = ((#stored_tasks > 0) and (current.tasks ~= stored_tasks)), comments = ((#stored_comments > 0) and (current.comments ~= stored_comments))}
 end
 M["any-local-change?"] = function(parsed)

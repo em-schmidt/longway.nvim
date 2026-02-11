@@ -13,6 +13,16 @@ M["content-hash"] = function(content)
   local normalized = string.gsub(string.gsub(string.gsub(string.gsub(content, "\r\n", "\n"), "[ \t]+\n", "\n"), "^%s+", ""), "%s+$", "")
   return M.djb2(normalized)
 end
+M["normalize-stored-hash"] = function(value)
+  local s = tostring((value or ""))
+  if (s == "") then
+    return ""
+  elseif (string.match(s, "^%x+$") and (#s < 8)) then
+    return (string.rep("0", (8 - #s)) .. s)
+  else
+    return s
+  end
+end
 M["has-changed"] = function(old_hash, new_content)
   local new_hash = M["content-hash"](new_content)
   return (old_hash ~= new_hash)
@@ -22,7 +32,7 @@ M["tasks-hash"] = function(tasks)
     return M.djb2("")
   else
     local sorted = vim.deepcopy(tasks)
-    local function _1_(a, b)
+    local function _2_(a, b)
       if (a.id and b.id) then
         return (a.id < b.id)
       else
@@ -37,17 +47,17 @@ M["tasks-hash"] = function(tasks)
         end
       end
     end
-    table.sort(sorted, _1_)
+    table.sort(sorted, _2_)
     local parts = {}
     for _, task in ipairs(sorted) do
-      local function _5_()
+      local function _6_()
         if task.complete then
           return "true"
         else
           return "false"
         end
       end
-      table.insert(parts, string.format("%s|%s|%s", (task.id or "new"), (task.description or ""), _5_()))
+      table.insert(parts, string.format("%s|%s|%s", (task.id or "new"), (task.description or ""), _6_()))
     end
     return M.djb2(table.concat(parts, "\n"))
   end
@@ -61,7 +71,7 @@ M["comments-hash"] = function(comments)
     return M.djb2("")
   else
     local sorted = vim.deepcopy(comments)
-    local function _7_(a, b)
+    local function _8_(a, b)
       if (a.id and b.id) then
         return (a.id < b.id)
       else
@@ -76,7 +86,7 @@ M["comments-hash"] = function(comments)
         end
       end
     end
-    table.sort(sorted, _7_)
+    table.sort(sorted, _8_)
     local parts = {}
     for _, cmt in ipairs(sorted) do
       table.insert(parts, string.format("%s|%s", (cmt.id or "new"), (cmt.text or "")))

@@ -45,6 +45,7 @@ M["open-in-browser"] = function()
   end
 end
 local function print_task_status(parsed, fm)
+  local hash_mod = require("longway.util.hash")
   local local_tasks = (parsed.tasks or {})
   local local_count = #local_tasks
   local complete_count
@@ -71,10 +72,9 @@ local function print_task_status(parsed, fm)
     end
     new_count = n
   end
-  local tasks_hash_stored = tostring((fm.tasks_hash or ""))
+  local tasks_hash_stored = hash_mod["normalize-stored-hash"](fm.tasks_hash)
   print(string.format("Tasks: %d local (%d complete, %d new)", local_count, complete_count, new_count))
   if (#tasks_hash_stored > 0) then
-    local hash_mod = require("longway.util.hash")
     local current_hash = hash_mod["tasks-hash"](local_tasks)
     local changed = (tasks_hash_stored ~= current_hash)
     local function _7_()
@@ -90,6 +90,7 @@ local function print_task_status(parsed, fm)
   end
 end
 local function print_comment_status(parsed, fm)
+  local hash_mod = require("longway.util.hash")
   local local_comments = (parsed.comments or {})
   local local_count = #local_comments
   local new_count
@@ -104,10 +105,9 @@ local function print_comment_status(parsed, fm)
     end
     new_count = n
   end
-  local comments_hash_stored = tostring((fm.comments_hash or ""))
+  local comments_hash_stored = hash_mod["normalize-stored-hash"](fm.comments_hash)
   print(string.format("Comments: %d local (%d new)", local_count, new_count))
   if (#comments_hash_stored > 0) then
-    local hash_mod = require("longway.util.hash")
     local current_hash = hash_mod["comments-hash"](local_comments)
     local changed = (comments_hash_stored ~= current_hash)
     local function _10_()
@@ -123,9 +123,9 @@ local function print_comment_status(parsed, fm)
   end
 end
 local function print_description_status(parsed, fm)
-  local sync_hash_stored = tostring((fm.sync_hash or ""))
+  local hash_mod = require("longway.util.hash")
+  local sync_hash_stored = hash_mod["normalize-stored-hash"](fm.sync_hash)
   if (#sync_hash_stored > 0) then
-    local hash_mod = require("longway.util.hash")
     local content_hash = hash_mod["content-hash"]
     local current_hash = content_hash((parsed.description or ""))
     local changed = (sync_hash_stored ~= current_hash)
@@ -141,16 +141,51 @@ local function print_description_status(parsed, fm)
     return nil
   end
 end
-local function print_conflict_status(fm)
+local function print_conflict_status(parsed, bufnr)
+  local fm = parsed.frontmatter
   if fm.conflict_sections then
-    local sections
+    local diff = require("longway.sync.diff")
+    local local_changes = diff["detect-local-changes"](parsed)
+    local conflict_list
     if (type(fm.conflict_sections) == "table") then
-      sections = table.concat(fm.conflict_sections, ", ")
+      conflict_list = fm.conflict_sections
     else
-      sections = tostring(fm.conflict_sections)
+      conflict_list = {fm.conflict_sections}
     end
-    print(string.format("CONFLICT in: %s", sections))
-    return print("  Resolve with: :LongwayResolve <local|remote|manual>")
+    local still_conflicted
+    do
+      local tbl_26_ = {}
+      local i_27_ = 0
+      for _, section in ipairs(conflict_list) do
+        local val_28_
+        if local_changes[section] then
+          val_28_ = section
+        else
+          val_28_ = nil
+        end
+        if (nil ~= val_28_) then
+          i_27_ = (i_27_ + 1)
+          tbl_26_[i_27_] = val_28_
+        else
+        end
+      end
+      still_conflicted = tbl_26_
+    end
+    if (#still_conflicted > 0) then
+      print(string.format("CONFLICT in: %s", table.concat(still_conflicted, ", ")))
+      return print("  Resolve with: :LongwayResolve <local|remote|manual>")
+    else
+      print("Conflict resolved (all sections synced)")
+      local frontmatter_mod = require("longway.markdown.frontmatter")
+      local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+      local content = table.concat(lines, "\n")
+      local parsed_fm = frontmatter_mod.parse(content)
+      parsed_fm.frontmatter["conflict_sections"] = nil
+      local new_fm_str = frontmatter_mod.generate(parsed_fm.frontmatter)
+      local new_content = (new_fm_str .. "\n\n" .. parsed_fm.body)
+      local new_lines = vim.split(new_content, "\n", {plain = true})
+      return vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, new_lines)
+    end
   else
     return nil
   end
@@ -187,7 +222,7 @@ M.status = function()
       print_description_status(parsed, fm)
       print_task_status(parsed, fm)
       print_comment_status(parsed, fm)
-      return print_conflict_status(fm)
+      return print_conflict_status(parsed, bufnr)
     end
   end
 end

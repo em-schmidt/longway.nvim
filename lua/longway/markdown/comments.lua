@@ -34,6 +34,9 @@ M["parse-block"] = function(block)
       if parsed then
         found_header = true
         header_data = parsed
+        while (#lines > 0) do
+          table.remove(lines)
+        end
       else
         if not string.match(line, "^%s*$") then
           table.insert(lines, line)
@@ -48,7 +51,10 @@ M["parse-block"] = function(block)
     end
   end
   if header_data then
-    header_data.text = table.concat(lines, "\n")
+    do
+      local raw = table.concat(lines, "\n")
+      header_data.text = string.gsub(raw, "%s+$", "")
+    end
     return header_data
   else
     local text = string.gsub(table.concat(lines, "\n"), "^%s*(.-)%s*$", "%1")

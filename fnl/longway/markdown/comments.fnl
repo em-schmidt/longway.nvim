@@ -44,7 +44,11 @@
             (if parsed
                 (do
                   (set found-header true)
-                  (set header-data parsed))
+                  (set header-data parsed)
+                  ;; Clear any pre-header lines (e.g. --- separators) that
+                  ;; were collected for bare-block detection
+                  (while (> (length lines) 0)
+                    (table.remove lines)))
                 ;; No header found - collect as body text for bare block
                 (when (not (string.match line "^%s*$"))
                   (table.insert lines line))))
@@ -54,9 +58,11 @@
 
     ;; Return parsed comment
     (if header-data
-        ;; Full format with header
+        ;; Full format with header — trim trailing whitespace to prevent
+        ;; spurious edit detection during push
         (do
-          (set header-data.text (table.concat lines "\n"))
+          (let [raw (table.concat lines "\n")]
+            (set header-data.text (string.gsub raw "%s+$" "")))
           header-data)
         ;; Bare format - treat as new comment if there's meaningful text
         ;; (skip separator-only blocks like "---")

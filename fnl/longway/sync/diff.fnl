@@ -26,9 +26,9 @@
             (true = section has local changes)"
   (let [fm parsed.frontmatter
         current (M.compute-section-hashes parsed)
-        stored-desc (tostring (or fm.sync_hash ""))
-        stored-tasks (tostring (or fm.tasks_hash ""))
-        stored-comments (tostring (or fm.comments_hash ""))]
+        stored-desc (hash.normalize-stored-hash fm.sync_hash)
+        stored-tasks (hash.normalize-stored-hash fm.tasks_hash)
+        stored-comments (hash.normalize-stored-hash fm.comments_hash)]
     ;; Only flag a section as changed if it has a stored hash (non-empty).
     ;; Epics lack tasks_hash/comments_hash, so those sections should not
     ;; be considered changed.

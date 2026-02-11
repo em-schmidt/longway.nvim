@@ -24,6 +24,17 @@
                        (string.gsub "%s+$" ""))]
     (M.djb2 normalized)))
 
+(fn M.normalize-stored-hash [value]
+  "Normalize a hash value that may have been coerced to a number by YAML parsing.
+   djb2 hashes are 8-char hex strings (e.g. '00001505'). When stored in YAML without
+   quotes, all-digit hashes get parsed as numbers, losing leading zeros.
+   This recovers the original by left-padding with zeros."
+  (let [s (tostring (or value ""))]
+    (if (= s "") ""
+        (and (string.match s "^%x+$") (< (length s) 8))
+        (.. (string.rep "0" (- 8 (length s))) s)
+        s)))
+
 (fn M.has-changed [old-hash new-content]
   "Check if content has changed compared to stored hash"
   (let [new-hash (M.content-hash new-content)]
