@@ -110,6 +110,42 @@ local function _1_()
   describe("extract-comments", _14_)
   local function _18_()
     local function _19_()
+      local content = "# Title\n\n## Description\n\nSome desc\n\n## Local Notes\n\n<!-- This section is NOT synced to Shortcut -->\n\nMy custom notes here\n"
+      local extract_local_notes = parser["extract-local-notes"]
+      local result = extract_local_notes(content)
+      assert.is_not_nil(result)
+      assert.has_substring(result, "## Local Notes")
+      return assert.has_substring(result, "My custom notes here")
+    end
+    it("extracts local notes section with user content", _19_)
+    local function _20_()
+      local content = "# Title\n\n## Description\n\nSome content\n"
+      local extract_local_notes = parser["extract-local-notes"]
+      local result = extract_local_notes(content)
+      return assert.is_nil(result)
+    end
+    it("returns nil when no local notes section exists", _20_)
+    local function _21_()
+      local content = "# Title\n\n## Local Notes\n\n<!-- This section is NOT synced to Shortcut -->\n\n### My Heading\n\n- Item 1\n- Item 2\n\nSome paragraph.\n"
+      local extract_local_notes = parser["extract-local-notes"]
+      local result = extract_local_notes(content)
+      assert.has_substring(result, "### My Heading")
+      assert.has_substring(result, "- Item 1")
+      return assert.has_substring(result, "Some paragraph.")
+    end
+    it("preserves multi-line local notes content", _21_)
+    local function _22_()
+      local content = "# Title\n\n## Local Notes\n\n<!-- This section is NOT synced to Shortcut -->\n"
+      local extract_local_notes = parser["extract-local-notes"]
+      local result = extract_local_notes(content)
+      assert.is_not_nil(result)
+      return assert.has_substring(result, "## Local Notes")
+    end
+    return it("extracts blank local notes template", _22_)
+  end
+  describe("extract-local-notes", _18_)
+  local function _23_()
+    local function _24_()
       local content = t["sample-markdown"]()
       local result = parser.parse(content)
       assert.is_not_nil(result.frontmatter)
@@ -117,47 +153,54 @@ local function _1_()
       assert.is_table(result.tasks)
       return assert.is_table(result.comments)
     end
-    it("parses complete markdown file", _19_)
-    local function _20_()
+    it("parses complete markdown file", _24_)
+    local function _25_()
       local content = t["sample-markdown"]()
       local result = parser.parse(content)
       assert.equals(12345, result.frontmatter.shortcut_id)
       return assert.equals("story", result.frontmatter.shortcut_type)
     end
-    return it("extracts frontmatter fields", _20_)
+    it("extracts frontmatter fields", _25_)
+    local function _26_()
+      local content = t["sample-markdown"]()
+      local result = parser.parse(content)
+      assert.is_not_nil(result.local_notes)
+      return assert.has_substring(result.local_notes, "## Local Notes")
+    end
+    return it("includes local_notes in parsed result", _26_)
   end
-  describe("parse", _18_)
-  local function _21_()
-    local function _22_()
+  describe("parse", _23_)
+  local function _27_()
+    local function _28_()
       local content = t["sample-markdown"]()
       local get_shortcut_id = parser["get-shortcut-id"]
       local result = get_shortcut_id(content)
       return assert.equals(12345, result)
     end
-    it("extracts ID from frontmatter", _22_)
-    local function _23_()
+    it("extracts ID from frontmatter", _28_)
+    local function _29_()
       local content = "# No frontmatter"
       local get_shortcut_id = parser["get-shortcut-id"]
       local result = get_shortcut_id(content)
       return assert.is_nil(result)
     end
-    return it("returns nil when no ID", _23_)
+    return it("returns nil when no ID", _29_)
   end
-  describe("get-shortcut-id", _21_)
-  local function _24_()
-    local function _25_()
+  describe("get-shortcut-id", _27_)
+  local function _30_()
+    local function _31_()
       local content = t["sample-markdown"]()
       local is_longway_file = parser["is-longway-file"]
       return assert.is_true(is_longway_file(content))
     end
-    it("returns true for longway files", _25_)
-    local function _26_()
+    it("returns true for longway files", _31_)
+    local function _32_()
       local content = "# Regular File\n\nJust content."
       local is_longway_file = parser["is-longway-file"]
       return assert.is_false(is_longway_file(content))
     end
-    return it("returns false for regular markdown", _26_)
+    return it("returns false for regular markdown", _32_)
   end
-  return describe("is-longway-file", _24_)
+  return describe("is-longway-file", _30_)
 end
 return describe("longway.markdown.parser", _1_)

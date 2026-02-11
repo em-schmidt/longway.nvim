@@ -44,17 +44,27 @@
         []
         (comments-md.parse-section comments-content))))
 
+(fn M.extract-local-notes [content]
+  "Extract the Local Notes section from markdown content.
+   Returns the full text from '## Local Notes' to end of content, or nil if not found."
+  (let [pattern "\n## Local Notes\n"
+        pos (string.find content pattern 1 true)]
+    (when pos
+      (string.sub content (+ pos 1)))))
+
 (fn M.parse [content]
   "Parse a complete markdown file
-   Returns: {:frontmatter table :description string :tasks [tasks] :comments [comments] :body string}"
+   Returns: {:frontmatter table :description string :tasks [tasks] :comments [comments] :local_notes string :body string}"
   (let [parsed-fm (frontmatter.parse content)
         description (M.extract-description content)
         tasks (M.extract-tasks content)
-        comments (M.extract-comments content)]
+        comments (M.extract-comments content)
+        local-notes (M.extract-local-notes content)]
     {:frontmatter parsed-fm.frontmatter
      :description description
      :tasks tasks
      :comments comments
+     :local_notes local-notes
      :body parsed-fm.body
      :raw_frontmatter parsed-fm.raw_frontmatter}))
 

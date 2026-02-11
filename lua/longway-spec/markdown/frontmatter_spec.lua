@@ -59,7 +59,7 @@ local function _1_()
       local updated_content = (regenerated .. "\n\n" .. parsed1.body)
       local parsed2 = frontmatter.parse(updated_content)
       assert.equals(parsed1.body, parsed2.body)
-      local pattern = "---\n\n# Test Story"
+      local pattern = "%-%-%-\n\n# Test Story"
       return assert.is_not_nil(string.find(updated_content, pattern, 1, true))
     end
     return it("prevents blank line accumulation on parse-render cycles", _10_)
