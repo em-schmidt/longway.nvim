@@ -10,7 +10,7 @@
 
 (local M {})
 
-(local MAX_COL_WIDTH 35)
+(local MAX_COL_WIDTH 40)
 
 (fn nil-safe [value fallback]
   "Return fallback if value is nil or vim.NIL (userdata from JSON null).
