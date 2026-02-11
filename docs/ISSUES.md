@@ -21,6 +21,18 @@ stack traceback:
         vim/_editor.lua: in function 'fn'
         ...ic/.local/share/nvim/lazy/snacks.nvim/lua/snacks/win.lua:362: in function <...ic/.local/share/nvim/lazy/snacks.nvim/lua/snacks/win.lua:357>
 
+- [ ] Epic progress doesn't show total stories: example: 
+
+    ```markdown
+
+    # GitHub Migration PoC
+
+    **Progress:** 5/0 stories done (0%)
+
+    ```
+
+    This epic contains 15 stores, but shows 5/0 done
+
 # Completed Issues/TODOs:
 
 - [x] Comments created in markdown are not syncing to shortcut, no errors are produced.
