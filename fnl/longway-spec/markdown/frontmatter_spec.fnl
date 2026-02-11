@@ -99,7 +99,7 @@ id: 123
               ;; After parse-render cycle, body should remain the same
               (assert.equals parsed1.body parsed2.body)
               ;; And the full content should have exactly 2 newlines between --- and #
-              (let [pattern "%-%-%-\n\n# Test Story"]
+              (let [pattern "---\n\n# Test Story"]
                 (assert.is_not_nil (string.find updated-content pattern 1 true))))))))
 
     (describe "generate"
