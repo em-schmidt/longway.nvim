@@ -6,7 +6,7 @@ local slug = require("longway.util.slug")
 local tasks_md = require("longway.markdown.tasks")
 local comments_md = require("longway.markdown.comments")
 local M = {}
-local MAX_COL_WIDTH = 40
+local MAX_COL_WIDTH = 35
 local function nil_safe(value, fallback)
   if ((value == nil) or ((type(value) == "userdata") and (value == vim.NIL))) then
     return fallback
