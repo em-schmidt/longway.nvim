@@ -138,6 +138,41 @@ Comment text
                   result (extract-comments content)]
               (assert.same [] result))))))
 
+    (describe "extract-local-notes"
+      (fn []
+        (it "extracts local notes section with user content"
+          (fn []
+            (let [content "# Title\n\n## Description\n\nSome desc\n\n## Local Notes\n\n<!-- This section is NOT synced to Shortcut -->\n\nMy custom notes here\n"
+                  extract-local-notes (. parser "extract-local-notes")
+                  result (extract-local-notes content)]
+              (assert.is_not_nil result)
+              (assert.has_substring result "## Local Notes")
+              (assert.has_substring result "My custom notes here"))))
+
+        (it "returns nil when no local notes section exists"
+          (fn []
+            (let [content "# Title\n\n## Description\n\nSome content\n"
+                  extract-local-notes (. parser "extract-local-notes")
+                  result (extract-local-notes content)]
+              (assert.is_nil result))))
+
+        (it "preserves multi-line local notes content"
+          (fn []
+            (let [content "# Title\n\n## Local Notes\n\n<!-- This section is NOT synced to Shortcut -->\n\n### My Heading\n\n- Item 1\n- Item 2\n\nSome paragraph.\n"
+                  extract-local-notes (. parser "extract-local-notes")
+                  result (extract-local-notes content)]
+              (assert.has_substring result "### My Heading")
+              (assert.has_substring result "- Item 1")
+              (assert.has_substring result "Some paragraph."))))
+
+        (it "extracts blank local notes template"
+          (fn []
+            (let [content "# Title\n\n## Local Notes\n\n<!-- This section is NOT synced to Shortcut -->\n"
+                  extract-local-notes (. parser "extract-local-notes")
+                  result (extract-local-notes content)]
+              (assert.is_not_nil result)
+              (assert.has_substring result "## Local Notes"))))))
+
     (describe "parse"
       (fn []
         (it "parses complete markdown file"
@@ -154,7 +189,14 @@ Comment text
             (let [content (t.sample-markdown)
                   result (parser.parse content)]
               (assert.equals 12345 result.frontmatter.shortcut_id)
-              (assert.equals "story" result.frontmatter.shortcut_type))))))
+              (assert.equals "story" result.frontmatter.shortcut_type))))
+
+        (it "includes local_notes in parsed result"
+          (fn []
+            (let [content (t.sample-markdown)
+                  result (parser.parse content)]
+              (assert.is_not_nil result.local_notes)
+              (assert.has_substring result.local_notes "## Local Notes"))))))
 
     (describe "get-shortcut-id"
       (fn []

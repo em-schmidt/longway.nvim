@@ -95,7 +95,7 @@ local function render_comments(comments)
     return render_sync_section("comments", content)
   end
 end
-local function render_local_notes()
+M["render-local-notes"] = function()
   return table.concat({"## Local Notes", "", "<!-- This section is NOT synced to Shortcut -->", ""}, "\n")
 end
 M["render-story"] = function(story)
@@ -117,7 +117,7 @@ M["render-story"] = function(story)
   else
   end
   table.insert(sections, "")
-  table.insert(sections, render_local_notes())
+  table.insert(sections, M["render-local-notes"]())
   local body = table.concat(sections, "\n")
   local full_content = (frontmatter.generate(fm_data) .. "\n\n" .. body)
   local parser = require("longway.markdown.parser")
@@ -198,7 +198,7 @@ M["render-epic"] = function(epic, stories)
   else
   end
   table.insert(sections, "")
-  table.insert(sections, render_local_notes())
+  table.insert(sections, M["render-local-notes"]())
   local body = table.concat(sections, "\n")
   local full_content = (frontmatter.generate(fm_data) .. "\n\n" .. body)
   local parser = require("longway.markdown.parser")

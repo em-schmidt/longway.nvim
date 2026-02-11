@@ -104,7 +104,7 @@
       (let [content (comments-md.render-comments comments)]
         (render-sync-section "comments" content))))
 
-(fn render-local-notes []
+(fn M.render-local-notes []
   "Render the local notes section template"
   (table.concat ["## Local Notes"
                  ""
@@ -138,7 +138,7 @@
 
     ;; Local notes section
     (table.insert sections "")
-    (table.insert sections (render-local-notes))
+    (table.insert sections (M.render-local-notes))
 
     ;; Build full content
     (let [body (table.concat sections "\n")
@@ -243,7 +243,7 @@
 
     ;; Local notes
     (table.insert sections "")
-    (table.insert sections (render-local-notes))
+    (table.insert sections (M.render-local-notes))
 
     ;; Build full content
     (let [body (table.concat sections "\n")

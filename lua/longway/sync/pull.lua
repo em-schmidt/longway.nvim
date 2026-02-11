@@ -7,6 +7,7 @@ local members_api = require("longway.api.members")
 local workflows_api = require("longway.api.workflows")
 local search_api = require("longway.api.search")
 local comments_md = require("longway.markdown.comments")
+local parser = require("longway.markdown.parser")
 local renderer = require("longway.markdown.renderer")
 local slug = require("longway.util.slug")
 local notify = require("longway.ui.notify")
@@ -78,15 +79,30 @@ local function enrich_epic_stories(stories)
   end
   return stories
 end
+local function preserve_local_notes(new_markdown, old_local_notes)
+  if not old_local_notes then
+    return new_markdown
+  else
+    local template = renderer["render-local-notes"]()
+    local start, _end = string.find(new_markdown, template, 1, true)
+    if start then
+      return (string.sub(new_markdown, 1, (start - 1)) .. old_local_notes .. string.sub(new_markdown, (_end + 1)))
+    else
+      return new_markdown
+    end
+  end
+end
 M["pull-story"] = function(story_id, opts)
   local silent = (opts and opts.silent)
   if not silent then
     notify["pull-started"](story_id)
+  else
   end
   local result = stories_api.get(story_id)
   if not result.ok then
     if not silent then
       notify["api-error"](result.error, result.status)
+    else
     end
     return {error = result.error, ok = false}
   else
@@ -95,10 +111,25 @@ M["pull-story"] = function(story_id, opts)
     local filename = slug["make-filename"](story.id, story.name, "story")
     local filepath = (stories_dir .. "/" .. filename)
     local markdown = renderer["render-story"](story)
+    local old_local_notes
+    if (vim.fn.filereadable(filepath) == 1) then
+      local f = io.open(filepath, "r")
+      if f then
+        local existing = f:read("*a")
+        f:close()
+        old_local_notes = parser["extract-local-notes"](existing)
+      else
+        old_local_notes = nil
+      end
+    else
+      old_local_notes = nil
+    end
+    local final_markdown = preserve_local_notes(markdown, old_local_notes)
     ensure_directory(stories_dir)
-    if write_file(filepath, markdown) then
+    if write_file(filepath, final_markdown) then
       if not silent then
         notify["pull-completed"](story.id, story.name)
+      else
       end
       return {ok = true, path = filepath, story = story}
     else
@@ -123,7 +154,6 @@ M["refresh-current-buffer"] = function()
     return {error = "No file in current buffer", ok = false}
   else
     local content = table.concat(vim.api.nvim_buf_get_lines(bufnr, 0, -1, false), "\n")
-    local parser = require("longway.markdown.parser")
     local parsed = parser.parse(content)
     local story_id = parsed.frontmatter.shortcut_id
     local shortcut_type = (parsed.frontmatter.shortcut_type or "story")
@@ -131,6 +161,7 @@ M["refresh-current-buffer"] = function()
       notify.error("Not a longway-managed file")
       return {error = "Not a longway-managed file", ok = false}
     else
+      local old_local_notes = parser["extract-local-notes"](content)
       if (shortcut_type == "epic") then
         local result = epics_api["get-with-stories"](story_id)
         if not result.ok then
@@ -140,7 +171,8 @@ M["refresh-current-buffer"] = function()
           local epic = result.data.epic
           local stories = enrich_epic_stories((result.data.stories or {}))
           local markdown = renderer["render-epic"](epic, stories)
-          local lines = vim.split(markdown, "\n", {plain = true})
+          local final_markdown = preserve_local_notes(markdown, old_local_notes)
+          local lines = vim.split(final_markdown, "\n", {plain = true})
           vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
           notify["pull-completed"](epic.id, epic.name)
           return {ok = true, epic = epic}
@@ -153,7 +185,8 @@ M["refresh-current-buffer"] = function()
         else
           local story = fetch_story_comments(result.data)
           local markdown = renderer["render-story"](story)
-          local lines = vim.split(markdown, "\n", {plain = true})
+          local final_markdown = preserve_local_notes(markdown, old_local_notes)
+          local lines = vim.split(final_markdown, "\n", {plain = true})
           vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
           notify["pull-completed"](story.id, story.name)
           return {ok = true, story = story}
@@ -175,8 +208,22 @@ M["pull-epic"] = function(epic_id)
     local filename = slug["make-filename"](epic.id, epic.name, "epic")
     local filepath = (epics_dir .. "/" .. filename)
     local markdown = renderer["render-epic"](epic, stories)
+    local old_local_notes
+    if (vim.fn.filereadable(filepath) == 1) then
+      local f = io.open(filepath, "r")
+      if f then
+        local existing = f:read("*a")
+        f:close()
+        old_local_notes = parser["extract-local-notes"](existing)
+      else
+        old_local_notes = nil
+      end
+    else
+      old_local_notes = nil
+    end
+    local final_markdown = preserve_local_notes(markdown, old_local_notes)
     ensure_directory(epics_dir)
-    if write_file(filepath, markdown) then
+    if write_file(filepath, final_markdown) then
       notify["pull-completed"](epic.id, epic.name)
       return {ok = true, path = filepath, epic = epic, stories = stories}
     else
@@ -206,19 +253,22 @@ M["sync-stories"] = function(query, opts)
     local total = #stories
     local progress_id = progress.start("Syncing", total)
     local errors = {}
-    local synced, failed = 0, 0
-    for i, story in ipairs(stories) do
-      progress.update(progress_id, i, total, (story.name or tostring(story.id)))
-      vim.cmd.redraw()
-      local pull_result = M["pull-story"](story.id, {silent = true})
-      if pull_result.ok then
-        synced, failed = (synced + 1), failed
-      else
-        table.insert(errors, string.format("Story %s: %s", story.id, (pull_result.error or "unknown error")))
-        synced, failed = synced, (failed + 1)
+    local synced_count, failed_count
+    do
+      local synced, failed = 0, 0
+      for i, story in ipairs(stories) do
+        progress.update(progress_id, i, total, (story.name or tostring(story.id)))
+        vim.cmd.redraw()
+        local pull_result = M["pull-story"](story.id, {silent = true})
+        if pull_result.ok then
+          synced, failed = (synced + 1), failed
+        else
+          table.insert(errors, string.format("Story %s: %s", story.id, (pull_result.error or "unknown error")))
+          synced, failed = synced, (failed + 1)
+        end
       end
+      synced_count, failed_count = synced, failed
     end
-    local synced_count, failed_count = synced, failed
     progress.finish(progress_id, synced_count, failed_count)
     return {ok = true, synced = synced_count, failed = failed_count, errors = errors, total = total}
   end

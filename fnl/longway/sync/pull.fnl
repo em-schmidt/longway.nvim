@@ -9,6 +9,7 @@
 (local workflows-api (require :longway.api.workflows))
 (local search-api (require :longway.api.search))
 (local comments-md (require :longway.markdown.comments))
+(local parser (require :longway.markdown.parser))
 (local renderer (require :longway.markdown.renderer))
 (local slug (require :longway.util.slug))
 (local notify (require :longway.ui.notify))
@@ -75,6 +76,20 @@
     (enrich-story-slim story))
   stories)
 
+(fn preserve-local-notes [new-markdown old-local-notes]
+  "Replace the blank Local Notes template in new-markdown with preserved content.
+   old-local-notes: the full '## Local Notes...' text from the previous content, or nil.
+   Returns: updated markdown string."
+  (if (not old-local-notes)
+      new-markdown
+      (let [template (renderer.render-local-notes)
+            (start end) (string.find new-markdown template 1 true)]
+        (if start
+            (.. (string.sub new-markdown 1 (- start 1))
+                old-local-notes
+                (string.sub new-markdown (+ end 1)))
+            new-markdown))))
+
 (fn M.pull-story [story-id opts]
   "Pull a single story from Shortcut and save as markdown
    opts: {:silent bool} - when true, suppress per-story notifications (used during bulk sync)
@@ -94,12 +109,20 @@
                 stories-dir (config.get-stories-dir)
                 filename (slug.make-filename story.id story.name "story")
                 filepath (.. stories-dir "/" filename)
-                markdown (renderer.render-story story)]
+                markdown (renderer.render-story story)
+                ;; Preserve local notes from existing file
+                old-local-notes (when (= (vim.fn.filereadable filepath) 1)
+                                  (let [f (io.open filepath "r")]
+                                    (when f
+                                      (let [existing (f:read "*a")]
+                                        (f:close)
+                                        (parser.extract-local-notes existing)))))
+                final-markdown (preserve-local-notes markdown old-local-notes)]
             ;; Ensure directory exists
             (ensure-directory stories-dir)
 
             ;; Write the file
-            (if (write-file filepath markdown)
+            (if (write-file filepath final-markdown)
                 (do
                   (when (not silent)
                     (notify.pull-completed story.id story.name))
@@ -125,7 +148,6 @@
           {:ok false :error "No file in current buffer"})
         ;; Read current content to get shortcut_id
         (let [content (table.concat (vim.api.nvim_buf_get_lines bufnr 0 -1 false) "\n")
-              parser (require :longway.markdown.parser)
               parsed (parser.parse content)
               story-id (. parsed.frontmatter :shortcut_id)
               shortcut-type (or (. parsed.frontmatter :shortcut_type) "story")]
@@ -133,33 +155,37 @@
               (do
                 (notify.error "Not a longway-managed file")
                 {:ok false :error "Not a longway-managed file"})
-              ;; Pull fresh data based on type
-              (if (= shortcut-type "epic")
-                  ;; Epic refresh
-                  (let [result (epics-api.get-with-stories story-id)]
-                    (if (not result.ok)
-                        (do
-                          (notify.api-error result.error result.status)
-                          {:ok false :error result.error})
-                        (let [epic result.data.epic
-                              stories (enrich-epic-stories (or result.data.stories []))
-                              markdown (renderer.render-epic epic stories)
-                              lines (vim.split markdown "\n" {:plain true})]
-                          (vim.api.nvim_buf_set_lines bufnr 0 -1 false lines)
-                          (notify.pull-completed epic.id epic.name)
-                          {:ok true :epic epic})))
-                  ;; Story refresh
-                  (let [result (stories-api.get story-id)]
-                    (if (not result.ok)
-                        (do
-                          (notify.api-error result.error result.status)
-                          {:ok false :error result.error})
-                        (let [story (fetch-story-comments result.data)
-                              markdown (renderer.render-story story)
-                              lines (vim.split markdown "\n" {:plain true})]
-                          (vim.api.nvim_buf_set_lines bufnr 0 -1 false lines)
-                          (notify.pull-completed story.id story.name)
-                          {:ok true :story story})))))))))
+              ;; Extract local notes before refreshing
+              (let [old-local-notes (parser.extract-local-notes content)]
+                ;; Pull fresh data based on type
+                (if (= shortcut-type "epic")
+                    ;; Epic refresh
+                    (let [result (epics-api.get-with-stories story-id)]
+                      (if (not result.ok)
+                          (do
+                            (notify.api-error result.error result.status)
+                            {:ok false :error result.error})
+                          (let [epic result.data.epic
+                                stories (enrich-epic-stories (or result.data.stories []))
+                                markdown (renderer.render-epic epic stories)
+                                final-markdown (preserve-local-notes markdown old-local-notes)
+                                lines (vim.split final-markdown "\n" {:plain true})]
+                            (vim.api.nvim_buf_set_lines bufnr 0 -1 false lines)
+                            (notify.pull-completed epic.id epic.name)
+                            {:ok true :epic epic})))
+                    ;; Story refresh
+                    (let [result (stories-api.get story-id)]
+                      (if (not result.ok)
+                          (do
+                            (notify.api-error result.error result.status)
+                            {:ok false :error result.error})
+                          (let [story (fetch-story-comments result.data)
+                                markdown (renderer.render-story story)
+                                final-markdown (preserve-local-notes markdown old-local-notes)
+                                lines (vim.split final-markdown "\n" {:plain true})]
+                            (vim.api.nvim_buf_set_lines bufnr 0 -1 false lines)
+                            (notify.pull-completed story.id story.name)
+                            {:ok true :story story}))))))))))
 
 (fn M.pull-epic [epic-id]
   "Pull a single epic from Shortcut and save as markdown
@@ -177,12 +203,20 @@
               epics-dir (config.get-epics-dir)
               filename (slug.make-filename epic.id epic.name "epic")
               filepath (.. epics-dir "/" filename)
-              markdown (renderer.render-epic epic stories)]
+              markdown (renderer.render-epic epic stories)
+              ;; Preserve local notes from existing file
+              old-local-notes (when (= (vim.fn.filereadable filepath) 1)
+                                (let [f (io.open filepath "r")]
+                                  (when f
+                                    (let [existing (f:read "*a")]
+                                      (f:close)
+                                      (parser.extract-local-notes existing)))))
+              final-markdown (preserve-local-notes markdown old-local-notes)]
           ;; Ensure directory exists
           (ensure-directory epics-dir)
 
           ;; Write the file
-          (if (write-file filepath markdown)
+          (if (write-file filepath final-markdown)
               (do
                 (notify.pull-completed epic.id epic.name)
                 {:ok true :path filepath :epic epic :stories stories})

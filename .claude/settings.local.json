@@ -19,7 +19,8 @@
       "WebSearch",
       "WebFetch(domain:developer.shortcut.com)",
       "WebFetch(domain:help.shortcut.com)",
-      "WebFetch(domain:api.app.shortcut.com)"
+      "WebFetch(domain:api.app.shortcut.com)",
+      "Bash(git status:*)"
     ]
   }
 }

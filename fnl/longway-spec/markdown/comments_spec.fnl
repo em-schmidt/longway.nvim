@@ -73,7 +73,26 @@
             (let [block "**Author** · 2026-01-10 10:30 <!-- comment:333 -->"
                   result (comments-md.parse-block block)]
               (assert.is_not_nil result)
-              (assert.equals "" result.text))))))
+              (assert.equals "" result.text))))
+
+        (it "skips leading --- separator and produces clean text"
+          (fn []
+            (let [block "---\n**Author** · 2026-01-10 10:30 <!-- comment:456 -->\n\nClean text here."
+                  result (comments-md.parse-block block)]
+              (assert.is_not_nil result)
+              (assert.equals "Author" result.author)
+              (assert.equals 456 result.id)
+              (assert.equals "Clean text here." result.text))))
+
+        (it "render then parse roundtrip produces stable text"
+          (fn []
+            (let [cmt {:id 789 :author "Alice" :timestamp "2026-01-10 10:30" :text "Roundtrip test." :is_new false}
+                  rendered (comments-md.render-comment cmt)
+                  reparsed (comments-md.parse-block rendered)]
+              (assert.is_not_nil reparsed)
+              (assert.equals "Alice" reparsed.author)
+              (assert.equals 789 reparsed.id)
+              (assert.equals "Roundtrip test." reparsed.text))))))
 
     (describe "parse-section"
       (fn []
@@ -83,7 +102,9 @@
                   result (comments-md.parse-section content)]
               (assert.equals 2 (length result))
               (assert.equals "Author A" (. result 1 :author))
-              (assert.equals "Author B" (. result 2 :author)))))
+              (assert.equals "First comment." (. result 1 :text))
+              (assert.equals "Author B" (. result 2 :author))
+              (assert.equals "Second comment." (. result 2 :text)))))
 
         (it "handles empty content"
           (fn []

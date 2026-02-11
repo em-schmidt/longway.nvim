@@ -53,18 +53,18 @@
 
 (fn print-task-status [parsed fm]
   "Print task sync status info"
-  (let [local-tasks (or parsed.tasks [])
+  (let [hash-mod (require :longway.util.hash)
+        local-tasks (or parsed.tasks [])
         local-count (length local-tasks)
         complete-count (accumulate [n 0 _ task (ipairs local-tasks)]
                          (if task.complete (+ n 1) n))
         new-count (accumulate [n 0 _ task (ipairs local-tasks)]
                     (if task.is_new (+ n 1) n))
-        tasks-hash-stored (tostring (or fm.tasks_hash ""))]
+        tasks-hash-stored (hash-mod.normalize-stored-hash fm.tasks_hash)]
     (print (string.format "Tasks: %d local (%d complete, %d new)"
                           local-count complete-count new-count))
     (when (> (length tasks-hash-stored) 0)
-      (let [hash-mod (require :longway.util.hash)
-            current-hash (hash-mod.tasks-hash local-tasks)
+      (let [current-hash (hash-mod.tasks-hash local-tasks)
             changed (not= tasks-hash-stored current-hash)]
         (print (string.format "Tasks hash: %s%s"
                               tasks-hash-stored
@@ -72,16 +72,16 @@
 
 (fn print-comment-status [parsed fm]
   "Print comment sync status info"
-  (let [local-comments (or parsed.comments [])
+  (let [hash-mod (require :longway.util.hash)
+        local-comments (or parsed.comments [])
         local-count (length local-comments)
         new-count (accumulate [n 0 _ cmt (ipairs local-comments)]
                     (if cmt.is_new (+ n 1) n))
-        comments-hash-stored (tostring (or fm.comments_hash ""))]
+        comments-hash-stored (hash-mod.normalize-stored-hash fm.comments_hash)]
     (print (string.format "Comments: %d local (%d new)"
                           local-count new-count))
     (when (> (length comments-hash-stored) 0)
-      (let [hash-mod (require :longway.util.hash)
-            current-hash (hash-mod.comments-hash local-comments)
+      (let [current-hash (hash-mod.comments-hash local-comments)
             changed (not= comments-hash-stored current-hash)]
         (print (string.format "Comments hash: %s%s"
                               comments-hash-stored
@@ -89,23 +89,45 @@
 
 (fn print-description-status [parsed fm]
   "Print description sync status info"
-  (let [sync-hash-stored (tostring (or fm.sync_hash ""))]
+  (let [hash-mod (require :longway.util.hash)
+        sync-hash-stored (hash-mod.normalize-stored-hash fm.sync_hash)]
     (when (> (length sync-hash-stored) 0)
-      (let [hash-mod (require :longway.util.hash)
-            content-hash (. hash-mod "content-hash")
+      (let [content-hash (. hash-mod "content-hash")
             current-hash (content-hash (or parsed.description ""))
             changed (not= sync-hash-stored current-hash)]
         (print (string.format "Description: %s"
                               (if changed "changed" "synced")))))))
 
-(fn print-conflict-status [fm]
-  "Print conflict status if any conflicts exist"
-  (when fm.conflict_sections
-    (let [sections (if (= (type fm.conflict_sections) "table")
-                       (table.concat fm.conflict_sections ", ")
-                       (tostring fm.conflict_sections))]
-      (print (string.format "CONFLICT in: %s" sections))
-      (print "  Resolve with: :LongwayResolve <local|remote|manual>"))))
+(fn print-conflict-status [parsed bufnr]
+  "Print conflict status if any conflicts exist.
+   Verifies hashes before reporting — clears stale conflict_sections automatically."
+  (let [fm parsed.frontmatter]
+    (when fm.conflict_sections
+      (let [diff (require :longway.sync.diff)
+            local-changes (diff.detect-local-changes parsed)
+            ;; Only keep conflict sections that still have local changes
+            conflict-list (if (= (type fm.conflict_sections) "table")
+                              fm.conflict_sections
+                              [fm.conflict_sections])
+            still-conflicted (icollect [_ section (ipairs conflict-list)]
+                               (when (. local-changes section) section))]
+        (if (> (length still-conflicted) 0)
+            ;; Real conflict — report it
+            (do
+              (print (string.format "CONFLICT in: %s" (table.concat still-conflicted ", ")))
+              (print "  Resolve with: :LongwayResolve <local|remote|manual>"))
+            ;; Stale conflict — hashes match, auto-clear
+            (do
+              (print "Conflict resolved (all sections synced)")
+              (let [frontmatter-mod (require :longway.markdown.frontmatter)
+                    lines (vim.api.nvim_buf_get_lines bufnr 0 -1 false)
+                    content (table.concat lines "\n")
+                    parsed-fm (frontmatter-mod.parse content)]
+                (tset parsed-fm.frontmatter :conflict_sections nil)
+                (let [new-fm-str (frontmatter-mod.generate parsed-fm.frontmatter)
+                      new-content (.. new-fm-str "\n\n" parsed-fm.body)
+                      new-lines (vim.split new-content "\n" {:plain true})]
+                  (vim.api.nvim_buf_set_lines bufnr 0 -1 false new-lines)))))))))
 
 (fn M.status []
   "Show sync status of current file"
@@ -133,7 +155,7 @@
                 (print-description-status parsed fm)
                 (print-task-status parsed fm)
                 (print-comment-status parsed fm)
-                (print-conflict-status fm)))))))
+                (print-conflict-status parsed bufnr)))))))
 
 ;; Phase 2: Sync and filtering functions
 

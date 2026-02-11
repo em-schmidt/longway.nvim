@@ -39,12 +39,22 @@ M["extract-comments"] = function(content)
     return comments_md["parse-section"](comments_content)
   end
 end
+M["extract-local-notes"] = function(content)
+  local pattern = "\n## Local Notes\n"
+  local pos = string.find(content, pattern, 1, true)
+  if pos then
+    return string.sub(content, (pos + 1))
+  else
+    return nil
+  end
+end
 M.parse = function(content)
   local parsed_fm = frontmatter.parse(content)
   local description = M["extract-description"](content)
   local tasks = M["extract-tasks"](content)
   local comments = M["extract-comments"](content)
-  return {frontmatter = parsed_fm.frontmatter, description = description, tasks = tasks, comments = comments, body = parsed_fm.body, raw_frontmatter = parsed_fm.raw_frontmatter}
+  local local_notes = M["extract-local-notes"](content)
+  return {frontmatter = parsed_fm.frontmatter, description = description, tasks = tasks, comments = comments, local_notes = local_notes, body = parsed_fm.body, raw_frontmatter = parsed_fm.raw_frontmatter}
 end
 M["get-shortcut-id"] = function(content)
   local parsed = frontmatter.parse(content)
