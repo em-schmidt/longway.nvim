@@ -75,33 +75,38 @@
     (enrich-story-slim story))
   stories)
 
-(fn M.pull-story [story-id]
+(fn M.pull-story [story-id opts]
   "Pull a single story from Shortcut and save as markdown
+   opts: {:silent bool} - when true, suppress per-story notifications (used during bulk sync)
    Returns: {:ok bool :path string :error string}"
-  (notify.pull-started story-id)
+  (let [silent (and opts opts.silent)]
+    (when (not silent)
+      (notify.pull-started story-id))
 
-  (let [result (stories-api.get story-id)]
-    (if (not result.ok)
-        (do
-          (notify.api-error result.error result.status)
-          {:ok false :error result.error})
-        ;; Got the story - also fetch comments
-        (let [story (fetch-story-comments result.data)
-              stories-dir (config.get-stories-dir)
-              filename (slug.make-filename story.id story.name "story")
-              filepath (.. stories-dir "/" filename)
-              markdown (renderer.render-story story)]
-          ;; Ensure directory exists
-          (ensure-directory stories-dir)
+    (let [result (stories-api.get story-id)]
+      (if (not result.ok)
+          (do
+            (when (not silent)
+              (notify.api-error result.error result.status))
+            {:ok false :error result.error})
+          ;; Got the story - also fetch comments
+          (let [story (fetch-story-comments result.data)
+                stories-dir (config.get-stories-dir)
+                filename (slug.make-filename story.id story.name "story")
+                filepath (.. stories-dir "/" filename)
+                markdown (renderer.render-story story)]
+            ;; Ensure directory exists
+            (ensure-directory stories-dir)
 
-          ;; Write the file
-          (if (write-file filepath markdown)
-              (do
-                (notify.pull-completed story.id story.name)
-                {:ok true :path filepath :story story})
-              (do
-                (notify.error (string.format "Failed to write file: %s" filepath))
-                {:ok false :error "Failed to write file"}))))))
+            ;; Write the file
+            (if (write-file filepath markdown)
+                (do
+                  (when (not silent)
+                    (notify.pull-completed story.id story.name))
+                  {:ok true :path filepath :story story})
+                (do
+                  (notify.error (string.format "Failed to write file: %s" filepath))
+                  {:ok false :error "Failed to write file"})))))))
 
 (fn M.pull-story-to-buffer [story-id]
   "Pull a story and open it in a new buffer"
@@ -216,7 +221,8 @@
                              i story (ipairs stories)]
                   (do
                     (progress.update progress-id i total (or story.name (tostring story.id)))
-                    (let [pull-result (M.pull-story story.id)]
+                    (vim.cmd.redraw)
+                    (let [pull-result (M.pull-story story.id {:silent true})]
                       (if pull-result.ok
                           (values (+ synced 1) failed)
                           (do

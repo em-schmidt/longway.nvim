@@ -78,11 +78,16 @@ local function enrich_epic_stories(stories)
   end
   return stories
 end
-M["pull-story"] = function(story_id)
-  notify["pull-started"](story_id)
+M["pull-story"] = function(story_id, opts)
+  local silent = (opts and opts.silent)
+  if not silent then
+    notify["pull-started"](story_id)
+  end
   local result = stories_api.get(story_id)
   if not result.ok then
-    notify["api-error"](result.error, result.status)
+    if not silent then
+      notify["api-error"](result.error, result.status)
+    end
     return {error = result.error, ok = false}
   else
     local story = fetch_story_comments(result.data)
@@ -92,7 +97,9 @@ M["pull-story"] = function(story_id)
     local markdown = renderer["render-story"](story)
     ensure_directory(stories_dir)
     if write_file(filepath, markdown) then
-      notify["pull-completed"](story.id, story.name)
+      if not silent then
+        notify["pull-completed"](story.id, story.name)
+      end
       return {ok = true, path = filepath, story = story}
     else
       notify.error(string.format("Failed to write file: %s", filepath))
@@ -202,7 +209,8 @@ M["sync-stories"] = function(query, opts)
     local synced, failed = 0, 0
     for i, story in ipairs(stories) do
       progress.update(progress_id, i, total, (story.name or tostring(story.id)))
-      local pull_result = M["pull-story"](story.id)
+      vim.cmd.redraw()
+      local pull_result = M["pull-story"](story.id, {silent = true})
       if pull_result.ok then
         synced, failed = (synced + 1), failed
       else

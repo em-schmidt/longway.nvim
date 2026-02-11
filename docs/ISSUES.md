@@ -11,6 +11,8 @@ stack traceback:
 
 - [x] Automatic story sync for default preset only shows initial progress '[longway] Syncing: 0/100..', no stories sync, no progress updates happen.
   - Fixed: caused by the vim.fn.ref crash above — the sync loop never executed; resolved by same fix
+  - Fixed: added vim.cmd.redraw after progress.update to force screen refresh during synchronous sync loop
+  - Fixed: pull-story now accepts {:silent true} opts to suppress per-story "Pulling..."/"Pulled:" notifications during bulk sync; progress bar is the single notification source
 
 - [ ] `:LongwayRefresh` overwrites and or removes Local Notes
 
