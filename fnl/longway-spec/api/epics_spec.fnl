@@ -59,7 +59,7 @@
 
         (it "calculates stats from epic data"
           (fn []
-            (let [epic {:stats {:num_stories 10
+            (let [epic {:stats {:num_stories_total 10
                                 :num_stories_started 3
                                 :num_stories_done 5
                                 :num_stories_unstarted 2
@@ -80,14 +80,14 @@
 
         (it "calculates percentage progress"
           (fn []
-            (let [epic {:stats {:num_stories 10 :num_stories_done 5}}
+            (let [epic {:stats {:num_stories_total 10 :num_stories_done 5}}
                   get-progress (. epics "get-progress")
                   progress (get-progress epic)]
               (assert.equals 50 progress))))
 
         (it "returns 0 for empty epic"
           (fn []
-            (let [epic {:stats {:num_stories 0 :num_stories_done 0}}
+            (let [epic {:stats {:num_stories_total 0 :num_stories_done 0}}
                   get-progress (. epics "get-progress")
                   progress (get-progress epic)]
               (assert.equals 0 progress))))))))

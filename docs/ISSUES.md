@@ -23,7 +23,7 @@ stack traceback:
         vim/_editor.lua: in function 'fn'
         ...ic/.local/share/nvim/lazy/snacks.nvim/lua/snacks/win.lua:362: in function <...ic/.local/share/nvim/lazy/snacks.nvim/lua/snacks/win.lua:357>
 
-- [ ] Epic progress doesn't show total stories: example: 
+- [x] Epic progress doesn't show total stories: example:
 
     ```markdown
 
@@ -34,6 +34,7 @@ stack traceback:
     ```
 
     This epic contains 15 stores, but shows 5/0 done
+  - Fixed: code read `stats.num_stories` (nonexistent) instead of `stats.num_stories_total` from the Shortcut API; corrected in epics.fnl, renderer.fnl, picker.fnl, and test helpers
 
 # Completed Issues/TODOs:
 

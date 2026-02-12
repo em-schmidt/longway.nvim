@@ -178,7 +178,7 @@
                                           state (or epic.state "")
                                           stats (or epic.stats {})
                                           done (or stats.num_stories_done 0)
-                                          total-stories (or stats.num_stories 0)
+                                          total-stories (or stats.num_stories_total 0)
                                           started (or stats.num_stories_started 0)
                                           unstarted (or stats.num_stories_unstarted 0)
                                           points-done (or stats.num_points_done 0)
