@@ -144,7 +144,7 @@ This is a test comment.
                         :updated_at "2026-01-15T12:00:00Z"
                         :planned_start_date "2026-01-01"
                         :deadline "2026-03-01"
-                        :stats {:num_stories 10
+                        :stats {:num_stories_total 10
                                 :num_stories_started 3
                                 :num_stories_done 5
                                 :num_stories_unstarted 2

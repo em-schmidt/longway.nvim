@@ -190,7 +190,7 @@
   "Render epic statistics summary"
   (let [stats (nil-safe epic.stats {})
         num-done (nil-safe stats.num_stories_done 0)
-        num-total (nil-safe stats.num_stories 0)]
+        num-total (nil-safe stats.num_stories_total 0)]
     (string.format "**Progress:** %d/%d stories done (%d%%)"
                    num-done
                    num-total

@@ -59,7 +59,7 @@
    epic: epic data with stats field
    Returns: {:total number :started number :done number :unstarted number}"
   (let [stats (or epic.stats {})]
-    {:total (or stats.num_stories 0)
+    {:total (or stats.num_stories_total 0)
      :started (or stats.num_stories_started 0)
      :done (or stats.num_stories_done 0)
      :unstarted (or stats.num_stories_unstarted 0)

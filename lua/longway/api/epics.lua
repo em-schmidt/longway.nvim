@@ -47,7 +47,7 @@ M["get-with-stories"] = function(epic_id)
 end
 M["get-stats"] = function(epic)
   local stats = (epic.stats or {})
-  return {total = (stats.num_stories or 0), started = (stats.num_stories_started or 0), done = (stats.num_stories_done or 0), unstarted = (stats.num_stories_unstarted or 0), points_total = (stats.num_points or 0), points_done = (stats.num_points_done or 0)}
+  return {total = (stats.num_stories_total or 0), started = (stats.num_stories_started or 0), done = (stats.num_stories_done or 0), unstarted = (stats.num_stories_unstarted or 0), points_total = (stats.num_points or 0), points_done = (stats.num_points_done or 0)}
 end
 M["get-progress"] = function(epic)
   local stats = M["get-stats"](epic)

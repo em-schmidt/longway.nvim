@@ -149,7 +149,7 @@ end
 local function render_epic_stats(epic)
   local stats = nil_safe(epic.stats, {})
   local num_done = nil_safe(stats.num_stories_done, 0)
-  local num_total = nil_safe(stats.num_stories, 0)
+  local num_total = nil_safe(stats.num_stories_total, 0)
   local function _14_()
     if (num_total and (num_total > 0)) then
       return math.floor(((num_done / num_total) * 100))

@@ -61,7 +61,7 @@ local function _1_()
     end
     it("is a function", _18_)
     local function _19_()
-      local epic = {stats = {num_stories = 10, num_stories_started = 3, num_stories_done = 5, num_stories_unstarted = 2, num_points = 20, num_points_done = 10}}
+      local epic = {stats = {num_stories_total = 10, num_stories_started = 3, num_stories_done = 5, num_stories_unstarted = 2, num_points = 20, num_points_done = 10}}
       local get_stats = epics["get-stats"]
       local stats = get_stats(epic)
       assert.equals(10, stats.total)
@@ -78,14 +78,14 @@ local function _1_()
     end
     it("is a function", _21_)
     local function _22_()
-      local epic = {stats = {num_stories = 10, num_stories_done = 5}}
+      local epic = {stats = {num_stories_total = 10, num_stories_done = 5}}
       local get_progress = epics["get-progress"]
       local progress = get_progress(epic)
       return assert.equals(50, progress)
     end
     it("calculates percentage progress", _22_)
     local function _23_()
-      local epic = {stats = {num_stories = 0, num_stories_done = 0}}
+      local epic = {stats = {num_stories_total = 0, num_stories_done = 0}}
       local get_progress = epics["get-progress"]
       local progress = get_progress(epic)
       return assert.equals(0, progress)
