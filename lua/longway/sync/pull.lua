@@ -141,7 +141,7 @@ end
 M["pull-story-to-buffer"] = function(story_id)
   local result = M["pull-story"](story_id)
   if result.ok then
-    vim.cmd(("edit " .. vim.fn.fnameescape(result.path)))
+    vim.cmd(("confirm edit " .. vim.fn.fnameescape(result.path)))
   else
   end
   return result
@@ -235,7 +235,7 @@ end
 M["pull-epic-to-buffer"] = function(epic_id)
   local result = M["pull-epic"](epic_id)
   if result.ok then
-    vim.cmd(("edit " .. vim.fn.fnameescape(result.path)))
+    vim.cmd(("confirm edit " .. vim.fn.fnameescape(result.path)))
   else
   end
   return result

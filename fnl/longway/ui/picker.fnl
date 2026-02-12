@@ -151,10 +151,11 @@
                     :confirm (fn [picker item]
                                (picker:close)
                                (when item
-                                 (if item.file
-                                     (vim.cmd (.. "edit " (vim.fn.fnameescape item.file)))
-                                     (let [pull (require :longway.sync.pull)]
-                                       (pull.pull-story-to-buffer item.id)))))})))
+                                 (vim.schedule
+                                   #(if item.file
+                                        (vim.cmd (.. "confirm edit " (vim.fn.fnameescape item.file)))
+                                        (let [pull (require :longway.sync.pull)]
+                                          (pull.pull-story-to-buffer item.id))))))})))
 
 ;; ---------------------------------------------------------------------------
 ;; Source: Epics
@@ -237,10 +238,11 @@
                     :confirm (fn [picker item]
                                (picker:close)
                                (when item
-                                 (if item.file
-                                     (vim.cmd (.. "edit " (vim.fn.fnameescape item.file)))
-                                     (let [pull (require :longway.sync.pull)]
-                                       (pull.pull-epic-to-buffer item.id)))))})))
+                                 (vim.schedule
+                                   #(if item.file
+                                        (vim.cmd (.. "confirm edit " (vim.fn.fnameescape item.file)))
+                                        (let [pull (require :longway.sync.pull)]
+                                          (pull.pull-epic-to-buffer item.id))))))})))
 
 ;; ---------------------------------------------------------------------------
 ;; Source: Presets
@@ -365,13 +367,14 @@
                                                                 (let [item (picker:current)
                                                                       push-mod (require :longway.sync.push)]
                                                                   (when (and item item.file)
-                                                                    (vim.cmd (.. "edit " (vim.fn.fnameescape item.file)))
+                                                                    (vim.cmd (.. "confirm edit " (vim.fn.fnameescape item.file)))
                                                                     (push-mod.push-current-buffer)))))
                                                         keymap)}}}
                     :confirm (fn [picker item]
                                (picker:close)
                                (when (and item item.file)
-                                 (vim.cmd (.. "edit " (vim.fn.fnameescape item.file)))))})))
+                                 (vim.schedule
+                                   #(vim.cmd (.. "confirm edit " (vim.fn.fnameescape item.file))))))})))
 
 ;; ---------------------------------------------------------------------------
 ;; Source: Comments
