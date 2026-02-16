@@ -76,33 +76,23 @@
 
     fm))
 
-(fn render-sync-section [section-name content]
-  "Wrap content in sync markers"
-  (let [cfg (config.get)
-        start-marker (string.gsub cfg.sync_start_marker "{section}" section-name)
-        end-marker (string.gsub cfg.sync_end_marker "{section}" section-name)]
-    (.. start-marker "\n" content "\n" end-marker)))
-
 (fn render-description [description]
-  "Render description section"
-  (let [desc (or description "")]
-    (render-sync-section "description" desc)))
+  "Render description content (without sync markers)"
+  (or description ""))
 
 (fn render-tasks [tasks]
-  "Render tasks section"
+  "Render tasks content (without sync markers)"
   (if (or (not tasks) (= (length tasks) 0))
-      (render-sync-section "tasks" "")
+      ""
       (let [formatted (tasks-md.format-api-tasks tasks)
             content (tasks-md.render-tasks formatted)]
-        (render-sync-section "tasks" content))))
+        content)))
 
 (fn render-comments [comments]
-  "Render comments section
-   Delegates to comments-md for rendering, matching the tasks pattern."
+  "Render comments content (without sync markers)"
   (if (or (not comments) (= (length comments) 0))
-      (render-sync-section "comments" "")
-      (let [content (comments-md.render-comments comments)]
-        (render-sync-section "comments" content))))
+      ""
+      (comments-md.render-comments comments)))
 
 (fn M.render-local-notes []
   "Render the local notes section template"
@@ -207,7 +197,7 @@
                   ""
                   "## Description"
                   ""
-                  (render-sync-section "description" (or epic.description ""))]]
+                  (or epic.description "")]]
 
     ;; Stories table
     (when (and stories (> (length stories) 0))

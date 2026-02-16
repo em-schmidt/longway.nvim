@@ -41,8 +41,7 @@ local function _1_()
       config.setup({})
       local cfg = config.get()
       assert.is_not_nil(cfg.workspace_dir)
-      assert.is_not_nil(cfg.sync_start_marker)
-      return assert.is_not_nil(cfg.sync_end_marker)
+      return assert.is_not_nil(cfg.sync_sections)
     end
     return it("returns table with expected keys", _9_)
   end

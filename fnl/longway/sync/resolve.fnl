@@ -1,7 +1,6 @@
 ;; Conflict resolution for longway.nvim
 ;; Provides strategies for resolving sync conflicts between local and remote.
 
-(local config (require :longway.config))
 (local notify (require :longway.ui.notify))
 (local parser (require :longway.markdown.parser))
 (local frontmatter (require :longway.markdown.frontmatter))
@@ -55,47 +54,50 @@
         {:ok false :error (or result.error "Pull failed")})))
 
 (fn M.resolve-manual [shortcut-id bufnr]
-  "Insert conflict markers into the description sync section.
+  "Insert conflict markers into the description section.
    Fetches remote description and shows both versions side by side.
    Returns: {:ok bool :error string}"
   (let [stories-api (require :longway.api.stories)
         remote-result (stories-api.get shortcut-id)]
     (if (not remote-result.ok)
         {:ok false :error (or remote-result.error "Failed to fetch remote story")}
-        ;; Find the description sync section in the buffer and insert markers
-        (let [cfg (config.get)
-              lines (vim.api.nvim_buf_get_lines bufnr 0 -1 false)
-              start-marker (string.gsub cfg.sync_start_marker "{section}" "description")
-              end-marker (string.gsub cfg.sync_end_marker "{section}" "description")
-              start-escaped (string.gsub start-marker "[%-%.%+%[%]%(%)%$%^%%%?%*]" "%%%1")
-              end-escaped (string.gsub end-marker "[%-%.%+%[%]%(%)%$%^%%%?%*]" "%%%1")]
-          (var start-line nil)
-          (var end-line nil)
+        ;; Find the description section by ## header
+        (let [lines (vim.api.nvim_buf_get_lines bufnr 0 -1 false)]
+          ;; Find ## Description header and the next ## header
+          (var header-line nil)
+          (var next-header-line nil)
           (each [i line (ipairs lines)]
-            (when (string.match line start-escaped)
-              (set start-line i))
-            (when (and start-line (not end-line) (string.match line end-escaped))
-              (set end-line i)))
+            (when (and (not header-line) (= line "## Description"))
+              (set header-line i))
+            (when (and header-line (not next-header-line)
+                      (> i header-line)
+                      (string.match line "^## "))
+              (set next-header-line i)))
 
-          (if (not (and start-line end-line))
-              {:ok false :error "Could not find description sync section"}
-              ;; Extract local description (between markers)
-              (let [local-desc-lines []
-                    _ (for [i (+ start-line 1) (- end-line 1)]
+          (if (not header-line)
+              {:ok false :error "Could not find ## Description section"}
+              ;; Extract local description (between header and next header)
+              (let [content-start (+ header-line 1)
+                    content-end (if next-header-line
+                                    (- next-header-line 1)
+                                    (length lines))
+                    local-desc-lines []
+                    _ (for [i content-start content-end]
                         (table.insert local-desc-lines (. lines i)))
-                    local-desc (table.concat local-desc-lines "\n")
+                    local-desc (string.gsub (table.concat local-desc-lines "\n") "^%s+(.-)%s+$" "%1")
                     remote-desc (or remote-result.data.description "")
                     remote-ts (or remote-result.data.updated_at "unknown")
-                    ;; Build conflict section
-                    conflict-lines [start-marker
+                    ;; Build conflict section content (keep the header, replace content)
+                    conflict-lines [""
                                     "<!-- CONFLICT: Local version -->"
                                     local-desc
                                     (string.format "<!-- CONFLICT: Remote version (updated %s) -->" remote-ts)
                                     remote-desc
-                                    "<!-- END CONFLICT -- edit above, then :LongwayPush to resolve -->"
-                                    end-marker]]
-                ;; Replace the description sync section
-                (vim.api.nvim_buf_set_lines bufnr (- start-line 1) end-line false conflict-lines)
+                                    "<!-- END CONFLICT -- edit above, then :LongwayPush to resolve -->"]]
+                ;; Replace content between header and next section
+                (vim.api.nvim_buf_set_lines bufnr content-start
+                                            (if next-header-line (- next-header-line 1) (length lines))
+                                            false conflict-lines)
                 ;; Clear conflict_sections from frontmatter (user is now manually resolving)
                 (update-buffer-frontmatter bufnr {:conflict_sections nil})
                 (notify.info "Conflict markers inserted. Edit the description, then :LongwayPush to resolve.")

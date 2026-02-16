@@ -177,13 +177,10 @@
         (table.concat lines "\n"))))
 
 (fn M.render-section [tasks]
-  "Render tasks as a complete sync section with markers
-   Returns: string with sync markers wrapping the tasks"
-  (let [cfg (config.get)
-        start-marker (string.gsub cfg.sync_start_marker "{section}" "tasks")
-        end-marker (string.gsub cfg.sync_end_marker "{section}" "tasks")
-        content (M.render-tasks tasks)]
-    (.. start-marker "\n" content "\n" end-marker)))
+  "Render tasks as a complete section (header + content)
+   Returns: string with ## Tasks header and rendered tasks"
+  (let [content (M.render-tasks tasks)]
+    (.. "## Tasks\n\n" content)))
 
 ;;; ============================================================================
 ;;; API Task Formatting

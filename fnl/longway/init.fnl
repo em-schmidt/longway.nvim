@@ -28,7 +28,11 @@
 
   ;; Phase 6: Setup statusline buffer variable caching
   (let [statusline (require :longway.ui.statusline)]
-    (statusline.setup)))
+    (statusline.setup))
+
+  ;; Setup diagnostics for header validation in markdown files
+  (let [diagnostics (require :longway.ui.diagnostics)]
+    (diagnostics.setup)))
 
 ;; Expose core functions (Phase 1)
 (set M.pull core.pull)

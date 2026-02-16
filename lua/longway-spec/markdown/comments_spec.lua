@@ -173,11 +173,11 @@ local function _1_()
     local function _26_()
       local cmts = {{id = 1, author = "A", timestamp = "2026-01-01 10:00", text = "Comment", is_new = false}}
       local result = comments_md["render-section"](cmts)
-      assert.has_substring(result, "<!-- BEGIN SHORTCUT SYNC:comments -->")
-      assert.has_substring(result, "<!-- END SHORTCUT SYNC:comments -->")
-      return assert.has_substring(result, "Comment")
+      assert.has_substring(result, "## Comments")
+      assert.has_substring(result, "Comment")
+      return assert.is_nil(string.find(result, "BEGIN SHORTCUT SYNC", 1, true))
     end
-    return it("wraps comments in sync markers", _26_)
+    return it("renders comments with ## Comments header", _26_)
   end
   describe("render-section", _25_)
   local function _27_()

@@ -157,11 +157,8 @@ M["render-comments"] = function(comments)
   end
 end
 M["render-section"] = function(comments)
-  local cfg = config.get()
-  local start_marker = string.gsub(cfg.sync_start_marker, "{section}", "comments")
-  local end_marker = string.gsub(cfg.sync_end_marker, "{section}", "comments")
   local content = M["render-comments"](comments)
-  return (start_marker .. "\n" .. content .. "\n" .. end_marker)
+  return ("## Comments\n\n" .. content)
 end
 M["format-api-comments"] = function(raw_comments)
   local comments = (raw_comments or {})

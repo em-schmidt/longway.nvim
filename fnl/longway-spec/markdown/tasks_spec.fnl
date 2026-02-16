@@ -223,21 +223,20 @@ Some text after"
 
     (describe "render-section"
       (fn []
-        (it "wraps tasks in sync markers"
+        (it "renders tasks with ## Tasks header"
           (fn []
             (let [tasks [{:id 1 :description "Task" :complete false :position 1}]
                   render-section (. tasks-md "render-section")
                   result (render-section tasks)]
-              (assert.has_substring result "<!-- BEGIN SHORTCUT SYNC:tasks -->")
-              (assert.has_substring result "<!-- END SHORTCUT SYNC:tasks -->")
-              (assert.has_substring result "Task"))))
+              (assert.has_substring result "## Tasks")
+              (assert.has_substring result "Task")
+              (assert.is_nil (string.find result "BEGIN SHORTCUT SYNC" 1 true)))))
 
-        (it "renders empty section with markers"
+        (it "renders empty section with header"
           (fn []
             (let [render-section (. tasks-md "render-section")
                   result (render-section [])]
-              (assert.has_substring result "<!-- BEGIN SHORTCUT SYNC:tasks -->")
-              (assert.has_substring result "<!-- END SHORTCUT SYNC:tasks -->"))))))
+              (assert.has_substring result "## Tasks"))))))
 
     (describe "task-changed?"
       (fn []

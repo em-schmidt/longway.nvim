@@ -11,6 +11,32 @@ local confirm = require("longway.ui.confirm")
 local hash = require("longway.util.hash")
 local frontmatter = require("longway.markdown.frontmatter")
 local diff = require("longway.sync.diff")
+local function find_header_section_lines(lines, header_name)
+  local header_line = nil
+  local next_header_line = nil
+  for i, line in ipairs(lines) do
+    if (not header_line and (line == ("## " .. header_name))) then
+      header_line = i
+    else
+    end
+    if (header_line and not next_header_line and (i > header_line) and string.match(line, "^## ")) then
+      next_header_line = i
+    else
+    end
+  end
+  if header_line then
+    local content_start = (header_line + 1)
+    local content_end
+    if next_header_line then
+      content_end = (next_header_line - 1)
+    else
+      content_end = #lines
+    end
+    return content_start, content_end
+  else
+    return nil
+  end
+end
 local M = {}
 local function update_buffer_frontmatter(bufnr, new_fm_data)
   local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
@@ -26,65 +52,30 @@ local function update_buffer_frontmatter(bufnr, new_fm_data)
 end
 local function update_buffer_tasks(bufnr, tasks)
   local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
-  local content = table.concat(lines, "\n")
-  local cfg = config.get()
-  local start_marker = string.gsub(cfg.sync_start_marker, "{section}", "tasks")
-  local end_marker = string.gsub(cfg.sync_end_marker, "{section}", "tasks")
-  local start_escaped = string.gsub(start_marker, "[%-%.%+%[%]%(%)%$%^%%%?%*]", "%%%1")
-  local end_escaped = string.gsub(end_marker, "[%-%.%+%[%]%(%)%$%^%%%?%*]", "%%%1")
-  local start_line = nil
-  local end_line = nil
-  for i, line in ipairs(lines) do
-    if string.match(line, start_escaped) then
-      start_line = i
-    else
-    end
-    if (start_line and not end_line and string.match(line, end_escaped)) then
-      end_line = i
-    else
-    end
-  end
-  if (start_line and end_line) then
+  local content_start, content_end = find_header_section_lines(lines, "Tasks")
+  if content_start then
     local new_task_content = tasks_md["render-tasks"](tasks)
-    local new_section_lines = {start_marker}
-    local task_lines = vim.split(new_task_content, "\n", {plain = true})
-    for _, line in ipairs(task_lines) do
-      table.insert(new_section_lines, line)
+    local new_lines = vim.split(new_task_content, "\n", {plain = true})
+    local replacement = {""}
+    for _, line in ipairs(new_lines) do
+      table.insert(replacement, line)
     end
-    table.insert(new_section_lines, end_marker)
-    return vim.api.nvim_buf_set_lines(bufnr, (start_line - 1), end_line, false, new_section_lines)
+    return vim.api.nvim_buf_set_lines(bufnr, (content_start - 1), content_end, false, replacement)
   else
     return nil
   end
 end
 local function update_buffer_comments(bufnr, comments)
   local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
-  local cfg = config.get()
-  local start_marker = string.gsub(cfg.sync_start_marker, "{section}", "comments")
-  local end_marker = string.gsub(cfg.sync_end_marker, "{section}", "comments")
-  local start_escaped = string.gsub(start_marker, "[%-%.%+%[%]%(%)%$%^%%%?%*]", "%%%1")
-  local end_escaped = string.gsub(end_marker, "[%-%.%+%[%]%(%)%$%^%%%?%*]", "%%%1")
-  local start_line = nil
-  local end_line = nil
-  for i, line in ipairs(lines) do
-    if string.match(line, start_escaped) then
-      start_line = i
-    else
-    end
-    if (start_line and not end_line and string.match(line, end_escaped)) then
-      end_line = i
-    else
-    end
-  end
-  if (start_line and end_line) then
+  local content_start, content_end = find_header_section_lines(lines, "Comments")
+  if content_start then
     local new_comment_content = comments_md["render-comments"](comments)
-    local new_section_lines = {start_marker}
-    local comment_lines = vim.split(new_comment_content, "\n", {plain = true})
-    for _, line in ipairs(comment_lines) do
-      table.insert(new_section_lines, line)
+    local new_lines = vim.split(new_comment_content, "\n", {plain = true})
+    local replacement = {""}
+    for _, line in ipairs(new_lines) do
+      table.insert(replacement, line)
     end
-    table.insert(new_section_lines, end_marker)
-    return vim.api.nvim_buf_set_lines(bufnr, (start_line - 1), end_line, false, new_section_lines)
+    return vim.api.nvim_buf_set_lines(bufnr, (content_start - 1), content_end, false, replacement)
   else
     return nil
   end

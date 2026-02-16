@@ -177,13 +177,13 @@
 
     (describe "render-section"
       (fn []
-        (it "wraps comments in sync markers"
+        (it "renders comments with ## Comments header"
           (fn []
             (let [cmts [{:id 1 :author "A" :timestamp "2026-01-01 10:00" :text "Comment" :is_new false}]
                   result (comments-md.render-section cmts)]
-              (assert.has_substring result "<!-- BEGIN SHORTCUT SYNC:comments -->")
-              (assert.has_substring result "<!-- END SHORTCUT SYNC:comments -->")
-              (assert.has_substring result "Comment"))))))
+              (assert.has_substring result "## Comments")
+              (assert.has_substring result "Comment")
+              (assert.is_nil (string.find result "BEGIN SHORTCUT SYNC" 1 true)))))))
 
     (describe "comment-changed?"
       (fn []

@@ -1,6 +1,6 @@
 ;; Tests for longway.markdown.parser
 ;;
-;; Tests markdown parsing and sync section extraction
+;; Tests markdown parsing and header-based section extraction
 
 (local t (require :longway-spec.init))
 (require :longway-spec.assertions)
@@ -12,13 +12,9 @@
 
     (describe "extract-description"
       (fn []
-        (it "extracts content from description sync section"
+        (it "extracts content from description section"
           (fn []
-            (let [content "# Title
-
-<!-- BEGIN SHORTCUT SYNC:description -->
-This is the description content.
-<!-- END SHORTCUT SYNC:description -->"
+            (let [content "# Title\n\n## Description\n\nThis is the description content.\n\n## Tasks\n\nsome tasks"
                   extract-description (. parser "extract-description")
                   result (extract-description content)]
               (assert.equals "This is the description content." result))))
@@ -32,24 +28,40 @@ This is the description content.
 
         (it "handles multiline description"
           (fn []
-            (let [content "<!-- BEGIN SHORTCUT SYNC:description -->
-Line 1
-Line 2
-Line 3
-<!-- END SHORTCUT SYNC:description -->"
+            (let [content "# Title\n\n## Description\n\nLine 1\nLine 2\nLine 3\n\n## Tasks\n"
                   extract-description (. parser "extract-description")
                   result (extract-description content)]
               (assert.has_substring result "Line 1")
               (assert.has_substring result "Line 2")
-              (assert.has_substring result "Line 3"))))))
+              (assert.has_substring result "Line 3"))))
+
+        (it "extracts description that goes to EOF"
+          (fn []
+            (let [content "# Title\n\n## Description\n\nDescription to the end."
+                  extract-description (. parser "extract-description")
+                  result (extract-description content)]
+              (assert.equals "Description to the end." result))))
+
+        (it "handles empty description section"
+          (fn []
+            (let [content "# Title\n\n## Description\n\n## Tasks\n"
+                  extract-description (. parser "extract-description")
+                  result (extract-description content)]
+              (assert.equals "" result))))
+
+        (it "allows ### subheadings inside description"
+          (fn []
+            (let [content "# Title\n\n## Description\n\nSome text\n\n### Details\n\nMore details\n\n## Tasks\n"
+                  extract-description (. parser "extract-description")
+                  result (extract-description content)]
+              (assert.has_substring result "### Details")
+              (assert.has_substring result "More details"))))))
 
     (describe "extract-tasks"
       (fn []
         (it "extracts incomplete tasks"
           (fn []
-            (let [content "<!-- BEGIN SHORTCUT SYNC:tasks -->
-- [ ] Task one <!-- task:1 complete:false -->
-<!-- END SHORTCUT SYNC:tasks -->"
+            (let [content "## Description\n\nDesc\n\n## Tasks\n\n- [ ] Task one <!-- task:1 complete:false -->\n\n## Comments\n"
                   extract-tasks (. parser "extract-tasks")
                   result (extract-tasks content)]
               (assert.equals 1 (length result))
@@ -58,9 +70,7 @@ Line 3
 
         (it "extracts complete tasks"
           (fn []
-            (let [content "<!-- BEGIN SHORTCUT SYNC:tasks -->
-- [x] Done task <!-- task:2 complete:true -->
-<!-- END SHORTCUT SYNC:tasks -->"
+            (let [content "## Tasks\n\n- [x] Done task <!-- task:2 complete:true -->\n\n## Comments\n"
                   extract-tasks (. parser "extract-tasks")
                   result (extract-tasks content)]
               (assert.equals 1 (length result))
@@ -68,18 +78,14 @@ Line 3
 
         (it "extracts task IDs"
           (fn []
-            (let [content "<!-- BEGIN SHORTCUT SYNC:tasks -->
-- [ ] Task <!-- task:12345 complete:false -->
-<!-- END SHORTCUT SYNC:tasks -->"
+            (let [content "## Tasks\n\n- [ ] Task <!-- task:12345 complete:false -->\n\n## Comments\n"
                   extract-tasks (. parser "extract-tasks")
                   result (extract-tasks content)]
               (assert.equals 12345 (. result 1 :id)))))
 
         (it "handles new tasks without ID"
           (fn []
-            (let [content "<!-- BEGIN SHORTCUT SYNC:tasks -->
-- [ ] New task <!-- task:new complete:false -->
-<!-- END SHORTCUT SYNC:tasks -->"
+            (let [content "## Tasks\n\n- [ ] New task <!-- task:new complete:false -->\n\n## Comments\n"
                   extract-tasks (. parser "extract-tasks")
                   result (extract-tasks content)]
               (assert.is_nil (. result 1 :id))
@@ -94,11 +100,7 @@ Line 3
 
         (it "extracts multiple tasks"
           (fn []
-            (let [content "<!-- BEGIN SHORTCUT SYNC:tasks -->
-- [ ] First <!-- task:1 complete:false -->
-- [x] Second <!-- task:2 complete:true -->
-- [ ] Third <!-- task:3 complete:false -->
-<!-- END SHORTCUT SYNC:tasks -->"
+            (let [content "## Tasks\n\n- [ ] First <!-- task:1 complete:false -->\n- [x] Second <!-- task:2 complete:true -->\n- [ ] Third <!-- task:3 complete:false -->\n\n## Comments\n"
                   extract-tasks (. parser "extract-tasks")
                   result (extract-tasks content)]
               (assert.equals 3 (length result)))))))
@@ -107,12 +109,7 @@ Line 3
       (fn []
         (it "extracts comment author and text"
           (fn []
-            (let [content "<!-- BEGIN SHORTCUT SYNC:comments -->
----
-**John Doe** · 2026-01-10 10:30 <!-- comment:123 -->
-
-This is my comment.
-<!-- END SHORTCUT SYNC:comments -->"
+            (let [content "## Comments\n\n---\n**John Doe** · 2026-01-10 10:30 <!-- comment:123 -->\n\nThis is my comment.\n\n## Local Notes\n"
                   extract-comments (. parser "extract-comments")
                   result (extract-comments content)]
               (assert.equals 1 (length result))
@@ -121,12 +118,7 @@ This is my comment.
 
         (it "extracts comment IDs"
           (fn []
-            (let [content "<!-- BEGIN SHORTCUT SYNC:comments -->
----
-**Author** · 2026-01-10 10:30 <!-- comment:456 -->
-
-Comment text
-<!-- END SHORTCUT SYNC:comments -->"
+            (let [content "## Comments\n\n---\n**Author** · 2026-01-10 10:30 <!-- comment:456 -->\n\nComment text\n\n## Local Notes\n"
                   extract-comments (. parser "extract-comments")
                   result (extract-comments content)]
               (assert.equals 456 (. result 1 :id)))))
@@ -197,6 +189,20 @@ Comment text
                   result (parser.parse content)]
               (assert.is_not_nil result.local_notes)
               (assert.has_substring result.local_notes "## Local Notes"))))))
+
+    (describe "legacy sync marker fallback"
+      (fn []
+        (it "falls back to legacy sync markers when headers not found"
+          (fn []
+            ;; Stub notify.warn to avoid side effects
+            (let [notify (require :longway.ui.notify)
+                  original-warn notify.warn]
+              (set notify.warn (fn []))
+              (let [content "# Title\n\n<!-- BEGIN SHORTCUT SYNC:description -->\nLegacy description.\n<!-- END SHORTCUT SYNC:description -->"
+                    extract-description (. parser "extract-description")
+                    result (extract-description content)]
+                (assert.equals "Legacy description." result)
+                (set notify.warn original-warn)))))))
 
     (describe "get-shortcut-id"
       (fn []
