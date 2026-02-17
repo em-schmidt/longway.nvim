@@ -109,6 +109,7 @@ M["render-story"] = function(story)
   else
   end
   table.insert(sections, "")
+  table.insert(sections, "")
   table.insert(sections, M["render-local-notes"]())
   local body = table.concat(sections, "\n")
   local full_content = (frontmatter.generate(fm_data) .. "\n\n" .. body)

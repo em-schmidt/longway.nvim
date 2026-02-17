@@ -126,7 +126,8 @@
       (table.insert sections "")
       (table.insert sections (render-comments story.comments)))
 
-    ;; Local notes section
+    ;; Local notes section (extra blank line after comments for readability)
+    (table.insert sections "")
     (table.insert sections "")
     (table.insert sections (M.render-local-notes))
 
