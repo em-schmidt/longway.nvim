@@ -86,10 +86,6 @@ require("longway").setup({
   filename_template = "{id}-{slug}",
   slug_max_length = 50,
 
-  -- Sync markers (for identifying synced sections)
-  sync_start_marker = "<!-- BEGIN SHORTCUT SYNC:{section} -->",
-  sync_end_marker = "<!-- END SHORTCUT SYNC:{section} -->",
-
   -- Section sync toggles
   sync_sections = {
     description = true,
@@ -179,7 +175,7 @@ require("longway").setup({
 " Pull story #12345 from Shortcut
 :LongwayPull 12345
 
-" Edit the description between sync markers...
+" Edit the description under ## Description...
 " Toggle task checkboxes, add new tasks, remove tasks...
 " Add new comments in the comments section...
 " (see Markdown Format below for details)
@@ -312,29 +308,23 @@ comments_hash: "i9j0k1l2"
 
 ## Description
 
-<!-- BEGIN SHORTCUT SYNC:description -->
 This content syncs with Shortcut.
 
 Edit here and use :LongwayPush to update Shortcut.
-<!-- END SHORTCUT SYNC:description -->
 
 ## Tasks
 
-<!-- BEGIN SHORTCUT SYNC:tasks -->
 - [x] Design authentication flow <!-- task:101 @eric complete:true -->
 - [x] Set up database schema <!-- task:102 @eric complete:true -->
 - [ ] Implement password hashing <!-- task:103 complete:false -->
 - [ ] New task I added locally <!-- task:new -->
-<!-- END SHORTCUT SYNC:tasks -->
 
 ## Comments
 
-<!-- BEGIN SHORTCUT SYNC:comments -->
 ---
 **John Doe** · 2026-01-18 10:30 <!-- comment:456 -->
 
 This is a synced comment from Shortcut.
-<!-- END SHORTCUT SYNC:comments -->
 
 ## Local Notes
 
@@ -385,7 +375,7 @@ This is the comment text with **markdown** support.
 
 **Adding comments:** Write a new comment block with `<!-- comment:new -->` and `:LongwayPush` will create it.
 
-**Editing comments:** Local edits to existing comments trigger a warning — Shortcut's API doesn't support comment editing.
+**Editing comments:** Modify the text of an existing comment and `:LongwayPush` will update it in Shortcut.
 
 **Deleting comments:** Remove the comment block and push. If `confirm_delete` is enabled, you'll be prompted.
 

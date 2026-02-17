@@ -53,7 +53,7 @@ Thank you for your interest in contributing to longway.nvim! This guide will hel
 │   │   ├── resolve.fnl   # Conflict resolution strategies
 │   │   └── auto.fnl      # Auto-push on save with debounce
 │   ├── markdown/
-│   │   ├── parser.fnl    # Parse markdown (frontmatter + sync sections)
+│   │   ├── parser.fnl    # Parse markdown (frontmatter + header sections)
 │   │   ├── renderer.fnl  # Convert API responses → markdown
 │   │   ├── tasks.fnl     # Task parsing, rendering, owner resolution
 │   │   ├── comments.fnl  # Comment parsing, rendering, author resolution
@@ -61,9 +61,10 @@ Thank you for your interest in contributing to longway.nvim! This guide will hel
 │   ├── ui/
 │   │   ├── notify.fnl    # User notifications
 │   │   ├── confirm.fnl   # Confirmation prompts (task/comment deletion)
-│   │   ├── picker.fnl    # Snacks picker integration (stories, epics, presets, modified)
+│   │   ├── picker.fnl    # Snacks picker integration (stories, epics, presets, modified, comments)
 │   │   ├── progress.fnl  # Progress indicators for bulk operations
-│   │   └── statusline.fnl# Statusline component (lualine, custom)
+│   │   ├── statusline.fnl# Statusline component (lualine, custom)
+│   │   └── diagnostics.fnl # Header validation diagnostics for synced sections
 │   ├── util/
 │   │   ├── hash.fnl      # Content + task + comment hashing
 │   │   └── slug.fnl      # Title → filename slug
@@ -191,8 +192,6 @@ Custom assertions are available in `longway-spec.assertions`:
 ;; Check frontmatter presence
 (assert.has_frontmatter content)
 
-;; Check sync section presence
-(assert.has_sync_section content "description")
 ```
 
 ## Code Style
@@ -267,7 +266,7 @@ The comment sync system follows the same pattern as tasks:
 5. **Hashing:** `util/hash.fnl` computes `comments_hash` for change detection
 6. **Author resolution:** `markdown/comments.fnl` resolves `author_id` UUIDs to display names via `api/members.fnl`
 
-**Key difference from tasks:** There is no "update" path. Editing an existing comment's text locally triggers a warning notification, not an API call (Shortcut doesn't support comment editing).
+**Key difference from tasks:** Comment edits are synced to Shortcut via the Update Story Comment API endpoint.
 
 ### Single Source of Truth
 

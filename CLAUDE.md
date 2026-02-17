@@ -58,7 +58,7 @@ fnl/longway/           # Fennel source (edit these)
 │   ├── resolve.fnl    # Conflict resolution strategies (local/remote/manual)
 │   └── auto.fnl       # Auto-push on save with debounce
 ├── markdown/
-│   ├── parser.fnl     # Parse markdown (frontmatter + sync sections)
+│   ├── parser.fnl     # Parse markdown (frontmatter + header sections)
 │   ├── renderer.fnl   # Convert API responses → markdown
 │   ├── frontmatter.fnl# YAML frontmatter handling
 │   ├── tasks.fnl      # Task parsing, rendering, owner resolution
@@ -68,7 +68,8 @@ fnl/longway/           # Fennel source (edit these)
 │   ├── confirm.fnl    # Confirmation prompts (task/comment deletion)
 │   ├── progress.fnl   # Progress tracking for bulk operations
 │   ├── picker.fnl     # Snacks picker sources (stories/epics/presets/modified/comments)
-│   └── statusline.fnl # Statusline component API (lualine-compatible)
+│   ├── statusline.fnl # Statusline component API (lualine-compatible)
+│   └── diagnostics.fnl# Header validation diagnostics for synced sections
 ├── cache/
 │   └── store.fnl      # In-memory cache
 └── util/
@@ -89,7 +90,7 @@ plugin/longway.lua     # User command definitions
 - **Return values:** Functions return `{:ok bool :data value :error string}` tuples
 - **Config access:** Use `(config.get)` to access configuration
 - **HTTP:** plenary.curl with errors caught via `pcall`
-- **Sync markers:** HTML comments (`<!-- BEGIN SHORTCUT SYNC:{section} -->`) preserve sections in markdown
+- **Section parsing:** `##` markdown headers delimit synced sections (e.g., `## Description`, `## Tasks`). Legacy sync markers are supported as a fallback with a deprecation warning.
 
 ## Dependencies
 
