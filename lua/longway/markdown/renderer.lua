@@ -68,31 +68,23 @@ local function build_story_frontmatter(story)
   fm.local_updated_at = os.date("!%Y-%m-%dT%H:%M:%SZ")
   return fm
 end
-local function render_sync_section(section_name, content)
-  local cfg = config.get()
-  local start_marker = string.gsub(cfg.sync_start_marker, "{section}", section_name)
-  local end_marker = string.gsub(cfg.sync_end_marker, "{section}", section_name)
-  return (start_marker .. "\n" .. content .. "\n" .. end_marker)
-end
 local function render_description(description)
-  local desc = (description or "")
-  return render_sync_section("description", desc)
+  return (description or "")
 end
 local function render_tasks(tasks)
   if (not tasks or (#tasks == 0)) then
-    return render_sync_section("tasks", "")
+    return ""
   else
     local formatted = tasks_md["format-api-tasks"](tasks)
     local content = tasks_md["render-tasks"](formatted)
-    return render_sync_section("tasks", content)
+    return content
   end
 end
 local function render_comments(comments)
   if (not comments or (#comments == 0)) then
-    return render_sync_section("comments", "")
+    return ""
   else
-    local content = comments_md["render-comments"](comments)
-    return render_sync_section("comments", content)
+    return comments_md["render-comments"](comments)
   end
 end
 M["render-local-notes"] = function()
@@ -116,6 +108,7 @@ M["render-story"] = function(story)
     table.insert(sections, render_comments(story.comments))
   else
   end
+  table.insert(sections, "")
   table.insert(sections, "")
   table.insert(sections, M["render-local-notes"]())
   local body = table.concat(sections, "\n")
@@ -161,7 +154,7 @@ local function render_epic_stats(epic)
 end
 M["render-epic"] = function(epic, stories)
   local fm_data = build_epic_frontmatter(epic)
-  local sections = {("# " .. epic.name), "", render_epic_stats(epic), "", "## Description", "", render_sync_section("description", (epic.description or ""))}
+  local sections = {("# " .. epic.name), "", render_epic_stats(epic), "", "## Description", "", (epic.description or "")}
   if (stories and (#stories > 0)) then
     table.insert(sections, "")
     table.insert(sections, "## Stories")

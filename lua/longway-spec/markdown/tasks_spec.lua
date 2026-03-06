@@ -216,18 +216,17 @@ local function _1_()
       local tasks = {{id = 1, description = "Task", position = 1, complete = false}}
       local render_section = tasks_md["render-section"]
       local result = render_section(tasks)
-      assert.has_substring(result, "<!-- BEGIN SHORTCUT SYNC:tasks -->")
-      assert.has_substring(result, "<!-- END SHORTCUT SYNC:tasks -->")
-      return assert.has_substring(result, "Task")
+      assert.has_substring(result, "## Tasks")
+      assert.has_substring(result, "Task")
+      return assert.is_nil(string.find(result, "BEGIN SHORTCUT SYNC", 1, true))
     end
-    it("wraps tasks in sync markers", _31_)
+    it("renders tasks with ## Tasks header", _31_)
     local function _32_()
       local render_section = tasks_md["render-section"]
       local result = render_section({})
-      assert.has_substring(result, "<!-- BEGIN SHORTCUT SYNC:tasks -->")
-      return assert.has_substring(result, "<!-- END SHORTCUT SYNC:tasks -->")
+      return assert.has_substring(result, "## Tasks")
     end
-    return it("renders empty section with markers", _32_)
+    return it("renders empty section with header", _32_)
   end
   describe("render-section", _30_)
   local function _33_()

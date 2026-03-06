@@ -30,14 +30,4 @@ end
 say:set("assertion.has_frontmatter.positive", "Expected content to have valid YAML frontmatter")
 say:set("assertion.has_frontmatter.negative", "Expected content NOT to have frontmatter")
 assert:register("assertion", "has_frontmatter", has_frontmatter, "assertion.has_frontmatter.positive", "assertion.has_frontmatter.negative")
-local function has_sync_section(state, args)
-  local content = args[1]
-  local section_name = args[2]
-  local start_marker = ("<!-- BEGIN SHORTCUT SYNC:" .. section_name .. " -->")
-  local end_marker = ("<!-- END SHORTCUT SYNC:" .. section_name .. " -->")
-  return (content and string.find(content, start_marker, 1, true) and string.find(content, end_marker, 1, true))
-end
-say:set("assertion.has_sync_section.positive", "Expected content to have sync section '%s'")
-say:set("assertion.has_sync_section.negative", "Expected content NOT to have sync section '%s'")
-assert:register("assertion", "has_sync_section", has_sync_section, "assertion.has_sync_section.positive", "assertion.has_sync_section.negative")
-return {["has-substring"] = has_substring, ["is-valid-slug"] = is_valid_slug, ["is-valid-hash"] = is_valid_hash, ["has-frontmatter"] = has_frontmatter, ["has-sync-section"] = has_sync_section}
+return {["has-substring"] = has_substring, ["is-valid-slug"] = is_valid_slug, ["is-valid-hash"] = is_valid_hash, ["has-frontmatter"] = has_frontmatter}

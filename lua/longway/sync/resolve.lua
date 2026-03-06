@@ -1,5 +1,4 @@
 -- [nfnl] fnl/longway/sync/resolve.fnl
-local config = require("longway.config")
 local notify = require("longway.ui.notify")
 local parser = require("longway.markdown.parser")
 local frontmatter = require("longway.markdown.frontmatter")
@@ -47,38 +46,46 @@ M["resolve-manual"] = function(shortcut_id, bufnr)
   if not remote_result.ok then
     return {error = (remote_result.error or "Failed to fetch remote story"), ok = false}
   else
-    local cfg = config.get()
     local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
-    local start_marker = string.gsub(cfg.sync_start_marker, "{section}", "description")
-    local end_marker = string.gsub(cfg.sync_end_marker, "{section}", "description")
-    local start_escaped = string.gsub(start_marker, "[%-%.%+%[%]%(%)%$%^%%%?%*]", "%%%1")
-    local end_escaped = string.gsub(end_marker, "[%-%.%+%[%]%(%)%$%^%%%?%*]", "%%%1")
-    local start_line = nil
-    local end_line = nil
+    local header_line = nil
+    local next_header_line = nil
     for i, line in ipairs(lines) do
-      if string.match(line, start_escaped) then
-        start_line = i
+      if (not header_line and (line == "## Description")) then
+        header_line = i
       else
       end
-      if (start_line and not end_line and string.match(line, end_escaped)) then
-        end_line = i
+      if (header_line and not next_header_line and (i > header_line) and string.match(line, "^## ")) then
+        next_header_line = i
       else
       end
     end
-    if not (start_line and end_line) then
-      return {error = "Could not find description sync section", ok = false}
+    if not header_line then
+      return {error = "Could not find ## Description section", ok = false}
     else
+      local content_start = (header_line + 1)
+      local content_end
+      if next_header_line then
+        content_end = (next_header_line - 1)
+      else
+        content_end = #lines
+      end
       local local_desc_lines = {}
       local _
-      for i = (start_line + 1), (end_line - 1) do
+      for i = content_start, content_end do
         table.insert(local_desc_lines, lines[i])
       end
       _ = nil
-      local local_desc = table.concat(local_desc_lines, "\n")
+      local local_desc = string.gsub(table.concat(local_desc_lines, "\n"), "^%s+(.-)%s+$", "%1")
       local remote_desc = (remote_result.data.description or "")
       local remote_ts = (remote_result.data.updated_at or "unknown")
-      local conflict_lines = {start_marker, "<!-- CONFLICT: Local version -->", local_desc, string.format("<!-- CONFLICT: Remote version (updated %s) -->", remote_ts), remote_desc, "<!-- END CONFLICT -- edit above, then :LongwayPush to resolve -->", end_marker}
-      vim.api.nvim_buf_set_lines(bufnr, (start_line - 1), end_line, false, conflict_lines)
+      local conflict_lines = {"", "<!-- CONFLICT: Local version -->", local_desc, string.format("<!-- CONFLICT: Remote version (updated %s) -->", remote_ts), remote_desc, "<!-- END CONFLICT -- edit above, then :LongwayPush to resolve -->"}
+      local _6_
+      if next_header_line then
+        _6_ = (next_header_line - 1)
+      else
+        _6_ = #lines
+      end
+      vim.api.nvim_buf_set_lines(bufnr, content_start, _6_, false, conflict_lines)
       update_buffer_frontmatter(bufnr, {conflict_sections = nil})
       notify.info("Conflict markers inserted. Edit the description, then :LongwayPush to resolve.")
       return {ok = true}

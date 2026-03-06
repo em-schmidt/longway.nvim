@@ -167,11 +167,8 @@ M["render-tasks"] = function(tasks)
   end
 end
 M["render-section"] = function(tasks)
-  local cfg = config.get()
-  local start_marker = string.gsub(cfg.sync_start_marker, "{section}", "tasks")
-  local end_marker = string.gsub(cfg.sync_end_marker, "{section}", "tasks")
   local content = M["render-tasks"](tasks)
-  return (start_marker .. "\n" .. content .. "\n" .. end_marker)
+  return ("## Tasks\n\n" .. content)
 end
 M["format-api-tasks"] = function(raw_tasks)
   local formatted = {}

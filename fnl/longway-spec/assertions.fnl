@@ -76,27 +76,7 @@
                  "assertion.has_frontmatter.positive"
                  "assertion.has_frontmatter.negative")
 
-;; has_sync_section - Check if content has a specific sync section
-(fn has-sync-section [state args]
-  (let [[content section-name] args
-        start-marker (.. "<!-- BEGIN SHORTCUT SYNC:" section-name " -->")
-        end-marker (.. "<!-- END SHORTCUT SYNC:" section-name " -->")]
-    (and content
-         (string.find content start-marker 1 true)
-         (string.find content end-marker 1 true))))
-
-(say:set "assertion.has_sync_section.positive"
-         "Expected content to have sync section '%s'")
-(say:set "assertion.has_sync_section.negative"
-         "Expected content NOT to have sync section '%s'")
-
-(assert:register "assertion" "has_sync_section"
-                 has-sync-section
-                 "assertion.has_sync_section.positive"
-                 "assertion.has_sync_section.negative")
-
 {: has-substring
  : is-valid-slug
  : is-valid-hash
- : has-frontmatter
- : has-sync-section}
+ : has-frontmatter}

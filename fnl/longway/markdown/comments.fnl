@@ -179,13 +179,10 @@
         (table.concat rendered "\n\n"))))
 
 (fn M.render-section [comments]
-  "Render comments as a complete sync section with markers
-   Returns: string with sync markers wrapping the comments"
-  (let [cfg (config.get)
-        start-marker (string.gsub cfg.sync_start_marker "{section}" "comments")
-        end-marker (string.gsub cfg.sync_end_marker "{section}" "comments")
-        content (M.render-comments comments)]
-    (.. start-marker "\n" content "\n" end-marker)))
+  "Render comments as a complete section (header + content)
+   Returns: string with ## Comments header and rendered comments"
+  (let [content (M.render-comments comments)]
+    (.. "## Comments\n\n" content)))
 
 ;;; ============================================================================
 ;;; API Comment Formatting

@@ -36,20 +36,23 @@
                   result ((. renderer "render-story") story)]
               (assert.has_substring result "# My Test Story"))))
 
-        (it "renders description in sync section"
+        (it "renders description under ## Description header"
           (fn []
             (let [story (t.make-story {:description "Story description here."})
                   result ((. renderer "render-story") story)]
-              (assert.has_sync_section result "description")
-              (assert.has_substring result "Story description here."))))
+              (assert.has_substring result "## Description")
+              (assert.has_substring result "Story description here.")
+              ;; Should NOT have sync markers
+              (assert.is_nil (string.find result "BEGIN SHORTCUT SYNC" 1 true)))))
 
         (it "renders tasks section when enabled"
           (fn []
             (t.setup-test-config {:sync_sections {:tasks true}})
             (let [story (t.make-story {:tasks [(t.make-task {:description "Test task"})]})
                   result ((. renderer "render-story") story)]
-              (assert.has_sync_section result "tasks")
-              (assert.has_substring result "Test task"))))
+              (assert.has_substring result "## Tasks")
+              (assert.has_substring result "Test task")
+              (assert.is_nil (string.find result "BEGIN SHORTCUT SYNC" 1 true)))))
 
         (it "renders task checkboxes correctly"
           (fn []
@@ -64,8 +67,9 @@
             (t.setup-test-config {:sync_sections {:comments true}})
             (let [story (t.make-story {:comments [(t.make-parsed-comment {:text "Test comment"})]})
                   result ((. renderer "render-story") story)]
-              (assert.has_sync_section result "comments")
-              (assert.has_substring result "Test comment"))))
+              (assert.has_substring result "## Comments")
+              (assert.has_substring result "Test comment")
+              (assert.is_nil (string.find result "BEGIN SHORTCUT SYNC" 1 true)))))
 
         (it "includes comment author"
           (fn []
@@ -96,19 +100,19 @@
           (fn []
             (let [story (t.make-story {:description nil})
                   result ((. renderer "render-story") story)]
-              (assert.has_sync_section result "description"))))
+              (assert.has_substring result "## Description"))))
 
         (it "handles empty tasks"
           (fn []
             (let [story (t.make-story {:tasks []})
                   result ((. renderer "render-story") story)]
-              (assert.has_sync_section result "tasks"))))
+              (assert.has_substring result "## Tasks"))))
 
         (it "handles empty comments"
           (fn []
             (let [story (t.make-story {:comments []})
                   result ((. renderer "render-story") story)]
-              (assert.has_sync_section result "comments"))))))
+              (assert.has_substring result "## Comments"))))))
 
     (describe "render-epic"
       (fn []
@@ -162,7 +166,21 @@
                   result ((. renderer "render-epic") epic stories)]
               (assert.has_substring result "## Stories")
               (assert.has_substring result "Story One")
-              (assert.has_substring result "Story Two"))))))
+              (assert.has_substring result "Story Two"))))
+
+        (it "renders epic description without sync markers"
+          (fn []
+            (let [epic {:id 100
+                        :name "Epic"
+                        :description "Epic desc text"
+                        :state "done"
+                        :app_url "https://example.com"
+                        :created_at "2026-01-01T00:00:00Z"
+                        :updated_at "2026-01-15T00:00:00Z"}
+                  result ((. renderer "render-epic") epic [])]
+              (assert.has_substring result "## Description")
+              (assert.has_substring result "Epic desc text")
+              (assert.is_nil (string.find result "BEGIN SHORTCUT SYNC" 1 true)))))))
 
     (describe "vim.NIL handling"
       (fn []

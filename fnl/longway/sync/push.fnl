@@ -14,6 +14,28 @@
 (local frontmatter (require :longway.markdown.frontmatter))
 (local diff (require :longway.sync.diff))
 
+(fn find-header-section-lines [lines header-name]
+  "Find the line range for a ## header section in buffer lines.
+   Returns (start-line end-line) where start-line is the line after the header
+   and end-line is the line before the next ## header (or last line).
+   Line numbers are 1-indexed. Returns nil if header not found."
+  (var header-line nil)
+  (var next-header-line nil)
+  (each [i line (ipairs lines)]
+    (when (and (not header-line)
+              (= line (.. "## " header-name)))
+      (set header-line i))
+    (when (and header-line (not next-header-line)
+              (> i header-line)
+              (string.match line "^## "))
+      (set next-header-line i)))
+  (when header-line
+    (let [content-start (+ header-line 1)
+          content-end (if next-header-line
+                          (- next-header-line 1)
+                          (length lines))]
+      (values content-start content-end))))
+
 (local M {})
 
 (fn update-buffer-frontmatter [bufnr new-fm-data]
@@ -34,61 +56,33 @@
 (fn update-buffer-tasks [bufnr tasks]
   "Update the tasks section in a buffer with new task data (including new IDs)"
   (let [lines (vim.api.nvim_buf_get_lines bufnr 0 -1 false)
-        content (table.concat lines "\n")
-        cfg (config.get)
-        start-marker (string.gsub cfg.sync_start_marker "{section}" "tasks")
-        end-marker (string.gsub cfg.sync_end_marker "{section}" "tasks")
-        ;; Find the markers
-        start-escaped (string.gsub start-marker "[%-%.%+%[%]%(%)%$%^%%%?%*]" "%%%1")
-        end-escaped (string.gsub end-marker "[%-%.%+%[%]%(%)%$%^%%%?%*]" "%%%1")]
-    ;; Find start and end positions
-    (var start-line nil)
-    (var end-line nil)
-    (each [i line (ipairs lines)]
-      (when (string.match line start-escaped)
-        (set start-line i))
-      (when (and start-line (not end-line) (string.match line end-escaped))
-        (set end-line i)))
-
-    (when (and start-line end-line)
+        (content-start content-end) (find-header-section-lines lines "Tasks")]
+    (when content-start
       ;; Generate new task content
       (let [new-task-content (tasks-md.render-tasks tasks)
-            new-section-lines [start-marker]
-            task-lines (vim.split new-task-content "\n" {:plain true})]
-        (each [_ line (ipairs task-lines)]
-          (table.insert new-section-lines line))
-        (table.insert new-section-lines end-marker)
-        ;; Replace lines from start to end
-        (vim.api.nvim_buf_set_lines bufnr (- start-line 1) end-line false new-section-lines)))))
+            new-lines (vim.split new-task-content "\n" {:plain true})
+            ;; Add blank line after header, then content
+            replacement [""]
+            ]
+        (each [_ line (ipairs new-lines)]
+          (table.insert replacement line))
+        ;; Replace content lines (keep the header line, replace everything after)
+        (vim.api.nvim_buf_set_lines bufnr (- content-start 1) content-end false replacement)))))
 
 (fn update-buffer-comments [bufnr comments]
   "Update the comments section in a buffer with new comment data (including new IDs)"
   (let [lines (vim.api.nvim_buf_get_lines bufnr 0 -1 false)
-        cfg (config.get)
-        start-marker (string.gsub cfg.sync_start_marker "{section}" "comments")
-        end-marker (string.gsub cfg.sync_end_marker "{section}" "comments")
-        ;; Find the markers
-        start-escaped (string.gsub start-marker "[%-%.%+%[%]%(%)%$%^%%%?%*]" "%%%1")
-        end-escaped (string.gsub end-marker "[%-%.%+%[%]%(%)%$%^%%%?%*]" "%%%1")]
-    ;; Find start and end positions
-    (var start-line nil)
-    (var end-line nil)
-    (each [i line (ipairs lines)]
-      (when (string.match line start-escaped)
-        (set start-line i))
-      (when (and start-line (not end-line) (string.match line end-escaped))
-        (set end-line i)))
-
-    (when (and start-line end-line)
+        (content-start content-end) (find-header-section-lines lines "Comments")]
+    (when content-start
       ;; Generate new comment content
       (let [new-comment-content (comments-md.render-comments comments)
-            new-section-lines [start-marker]
-            comment-lines (vim.split new-comment-content "\n" {:plain true})]
-        (each [_ line (ipairs comment-lines)]
-          (table.insert new-section-lines line))
-        (table.insert new-section-lines end-marker)
-        ;; Replace lines from start to end
-        (vim.api.nvim_buf_set_lines bufnr (- start-line 1) end-line false new-section-lines)))))
+            new-lines (vim.split new-comment-content "\n" {:plain true})
+            ;; Add blank line after header, then content
+            replacement [""]]
+        (each [_ line (ipairs new-lines)]
+          (table.insert replacement line))
+        ;; Replace content lines (keep the header line, replace everything after)
+        (vim.api.nvim_buf_set_lines bufnr (- content-start 1) content-end false replacement)))))
 
 (fn push-story-comments [story-id local-comments opts]
   "Push comment changes to Shortcut

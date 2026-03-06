@@ -18,10 +18,6 @@
    :slug_max_length 50
    :slug_separator "-"
 
-   ;; Sync markers
-   :sync_start_marker "<!-- BEGIN SHORTCUT SYNC:{section} -->"
-   :sync_end_marker "<!-- END SHORTCUT SYNC:{section} -->"
-
    ;; Section sync toggles
    :sync_sections {:description true
                    :tasks true

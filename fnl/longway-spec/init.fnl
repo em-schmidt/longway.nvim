@@ -12,8 +12,6 @@
                                           :epics_subdir "epics"
                                           :filename_template "{id}-{slug}"
                                           :slug_max_length 50
-                                          :sync_start_marker "<!-- BEGIN SHORTCUT SYNC:{section} -->"
-                                          :sync_end_marker "<!-- END SHORTCUT SYNC:{section} -->"
                                           :sync_sections {:description true
                                                           :tasks true
                                                           :comments true}
@@ -105,25 +103,19 @@ sync_hash: abc123
 
 ## Description
 
-<!-- BEGIN SHORTCUT SYNC:description -->
 This is the story description.
-<!-- END SHORTCUT SYNC:description -->
 
 ## Tasks
 
-<!-- BEGIN SHORTCUT SYNC:tasks -->
 - [ ] First task <!-- task:1 complete:false -->
 - [x] Second task <!-- task:2 complete:true -->
-<!-- END SHORTCUT SYNC:tasks -->
 
 ## Comments
 
-<!-- BEGIN SHORTCUT SYNC:comments -->
 ---
 **Test Author** · 2026-01-10 10:30 <!-- comment:11111 -->
 
 This is a test comment.
-<!-- END SHORTCUT SYNC:comments -->
 
 ## Local Notes
 

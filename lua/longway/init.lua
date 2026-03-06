@@ -26,8 +26,12 @@ M.setup = function(opts)
     auto.setup()
   else
   end
-  local statusline = require("longway.ui.statusline")
-  return statusline.setup()
+  do
+    local statusline = require("longway.ui.statusline")
+    statusline.setup()
+  end
+  local diagnostics = require("longway.ui.diagnostics")
+  return diagnostics.setup()
 end
 M.pull = core.pull
 M.push = core.push

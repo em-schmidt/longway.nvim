@@ -49,8 +49,7 @@
             (config.setup {})
             (let [cfg (config.get)]
               (assert.is_not_nil cfg.workspace_dir)
-              (assert.is_not_nil cfg.sync_start_marker)
-              (assert.is_not_nil cfg.sync_end_marker))))))
+              (assert.is_not_nil cfg.sync_sections))))))
 
     (describe "get-workspace-dir"
       (fn []
